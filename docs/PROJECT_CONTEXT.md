@@ -298,7 +298,7 @@ All tables are created in `apps/server/src/db/migrations/001_initial_schema.sql`
 | ----------- | ---------------------------- | --------------------------------------------------------------------- | -------- | -------- |
 | **Stage 1** | Foundation & Core Primitives | Shared package, DB schema, config, HLC, Snowflake, Ed25519, contracts | Member 1 | **DONE** |
 | **Stage 2** | Auth, Events & Booth Sales   | JWT auth, events CRUD, booth ticket sales, quota oversell prevention  | Member 2 | **DONE** |
-| **Stage 3** | Replication & Membership     | Peer gossip, heartbeat failure detector, anti-entropy log sync        | Member 3 | PENDING  |
+| **Stage 3** | Replication & Membership     | Peer gossip, heartbeat failure detector, anti-entropy log sync        | Member 3 | **DONE** |
 | **Stage 4** | Gate Validation & Quorum     | Offline validation, quorum checkin, concurrent double-scan resolution | Member 4 | PENDING  |
 | **Stage 5** | Admin & Booth Frontend       | React admin dashboard, booth sales UI, ticket view with failover      | Member 5 | PENDING  |
 | **Stage 6** | Scanner UI, Chaos & Testing  | Gate QR scanner, live cluster dashboard, chaos tools, load tests      | Member 6 | PENDING  |
@@ -559,3 +559,146 @@ Stage 3 should replicate rows from `op_log` where `applied_at` is newer than the
 
 - `POST /internal/gossip`: Stub in `apps/server/src/routes/internal.js` receives peer heartbeats and synchronizes `hlcService.receive(remoteHlc)`. Ready for gossip algorithm.
 - `POST /internal/sync`: Stub in `apps/server/src/routes/internal.js` ready to query `op_log` and stream log entries.
+
+---
+
+## 15. Stage 3 Completion Report
+
+### 15.1 Built in Stage 3
+
+1. **Peer Transport & Chaos Simulation Layer (`services/peerTransport.js`)**:
+   - Universal outbound HTTP client for inter-node communication (`gossip`, `replicate`, `sync`, `borrow`, `claim`, and gate quorum).
+   - In-memory chaos simulation (`global.__festpass_chaos` and `POST /internal/chaos`):
+     - **Partitions**: Bidirectional and unidirectional traffic blocking throwing 503 (`NETWORK_PARTITION`).
+     - **Artificial Latency**: Configurable delays before HTTP requests.
+     - **Message Drops**: Percentage-based probabilistic outbound and inbound packet dropping.
+     - **Reset**: Dynamic restoration of normal cluster networking.
+   - Inbound chaos middleware mounted in `apps/server/src/routes/internal.js` protecting all `/internal/*` routes against partitioned or dropped incoming messages.
+
+2. **Gossip Protocol & Failure Detection (`services/failureDetector.js`)**:
+   - Background gossip sender (`POST /internal/gossip`) broadcasting local HLC, role, and known peer states every 3 seconds.
+   - Failure state machine with states: `alive` (healthy), `suspect` (>6s without heartbeat), and `dead` (>15s without heartbeat).
+   - Dynamic auto-recovery: any valid incoming traffic (`gossip`, `replicate`, `sync`) immediately restores a peer to `alive`.
+   - Persisted status updates to SQLite `peers` table, and real-time Socket.IO broadcasts via `cluster:update`.
+
+3. **CRDT Apply Engine (`services/crdtEngine.js`)**:
+   - Deterministic convergent replication engine with strict HLC receive clock advancement.
+   - Operation idempotency via `op_log.op_id` deduplication.
+   - Conflict resolution rules:
+     - `EVENT_UPSERT`: Last-Writer-Wins (LWW) by HLC timestamp with node ID tie-breaking.
+     - `TICKET_ISSUED`: Add-only set (G-Set); preserves existing `revoked` tombstone state.
+     - `TICKET_REVOKED`: Revocation wins over valid status.
+     - `BOOTH_QUOTA_ADJUST`: Commutative delta-based counter updates across booth allocations.
+     - `CHECKIN_RECORDED`: Documented extension hook for Stage 4 gate quorum resolution.
+
+4. **Hybrid Push-Pull Replication Engine (`services/replicationService.js`)**:
+   - **Eager Push Replication**:
+     - Local writes trigger immediate background push (`POST /internal/replicate`) to all alive peers.
+     - Automatic exponential backoff retry for transient network hiccups.
+     - Dead or unreachable peers buffer operations into the SQLite `outbox` table (`002_stage3_replication.sql`).
+   - **Pull Anti-Entropy Synchronization**:
+     - Periodically (every 5 seconds) exchanges Version Vectors (`POST /internal/sync`).
+     - Computes missing operations and applies batches in strict causal HLC order.
+     - Outbox queue drainer automatically re-pushes buffered mutations when peers recover.
+
+5. **Cluster Observability Endpoints (`routes/cluster.js`)**:
+   - `GET /cluster/nodes`: Real-time state of all peers, URLs, roles, `last_seen`, `replicationLagOps`, and `replicationLagMs`.
+   - `GET /cluster/replication`: Local node ID, version vector, outbox sizes per peer, total `op_log` count, and latest local HLC.
+   - Socket.IO `cluster:update` broadcasts on heartbeat transitions and replication sync.
+
+6. **Convergence Verification Script (`scripts/verify_convergence.js`)**:
+   - `npm run verify:convergence`: Reads SQLite DB files across all 6 nodes (`B1`..`G3`), computes canonical MD5 hashes of `events` and `tickets`, and displays a formatted status table verifying cluster consistency.
+
+7. **Documentation**:
+   - `docs/REPLICATION.md`: In-depth architectural specification, ASCII/mermaid diagrams, protocol lifecycles, and CAP / HLC trade-off analysis.
+
+### 15.2 Test Coverage
+
+- 15 test suites, 77 unit & integration tests passing across `@festpass/shared` and `@festpass/server`:
+  - `failure_detector.test.js` (4 tests): heartbeat gossip, suspect transitions, dead transitions, auto-recovery.
+  - `crdt_engine.test.js` (6 tests): LWW event upserts, add-only ticket issuance, revocation priority, delta quota replication, HLC reception.
+  - `convergence.test.js` (3 tests): 3-booth concurrent ticket issuance convergence, partition & heal catch-up, duplicate delivery idempotency.
+  - `chaos.test.js` (4 tests): partition blocking, latency injection, message drops, chaos reset.
+  - `cluster_observability.test.js` (4 tests): `/cluster/nodes`, `/cluster/replication`, replication lag metrics, Socket.IO broadcasts.
+
+---
+
+## 16. Handoff Notes for Stage 4 (Gate Validation & Quorum)
+
+Stage 4 implements Gate Check-in Validation, Quorum Consensus, and Offline Scanning. Stage 3 provides the following interfaces, extension points, and transport mechanisms:
+
+### 16.1 Exact CRDT Apply Hook for Checkins (`crdtEngine.js`)
+
+In `apps/server/src/services/crdtEngine.js`, the method `applyCheckinOp(op, payload)` is the dedicated entry point for replicating checkin operations:
+
+```javascript
+// Located at apps/server/src/services/crdtEngine.js
+applyCheckinOp(op, payload) {
+  // EXTENSION POINT FOR STAGE 4:
+  // Stage 4 should implement concurrent double-scan resolution here:
+  // 1. Check if a checkin record for payload.ticketId already exists in checkins table.
+  // 2. If concurrent checkins exist, apply HLC total ordering:
+  //    - Winner: lowest HLC (first entry causally).
+  //    - Loser: log to conflicts table with winner_checkin_id and loser_checkin_id.
+  // 3. Update tickets.status = 'used' if valid entry.
+}
+```
+
+### 16.2 Peer Transport API for Quorum Requests (`peerTransport.js`)
+
+Stage 4 Gate nodes should communicate with peers using `peerTransport` to automatically benefit from connection timeouts, URL resolution, and chaos simulation:
+
+```javascript
+const peerTransport = require('../services/peerTransport');
+
+// Making a POST request to peer B1 or G2
+try {
+  const response = await peerTransport.post(
+    'G2',
+    '/internal/gate/validate',
+    {
+      ticketId: '...',
+      token: '...',
+      hlc: hlcService.now(),
+    },
+    { timeoutMs: 2000 }
+  );
+
+  if (response.data.valid) {
+    // Quorum vote collected
+  }
+} catch (err) {
+  if (err.statusCode === 503) {
+    // Peer is partitioned or unreachable
+  }
+}
+```
+
+Available helpers in `peerTransport`:
+
+- `peerTransport.post(targetNodeId, endpoint, body, options)`
+- `peerTransport.get(targetNodeId, endpoint, options)`
+- `peerTransport.resolvePeerUrl(targetNodeId)`
+
+### 16.3 Chaos Hook Usage for Gate Testing
+
+Stage 4 integration tests can simulate offline gate scenarios and network partitions via `POST /internal/chaos` or direct programmatically via `peerTransport`:
+
+```javascript
+const peerTransport = require('../services/peerTransport');
+
+// Isolate Gate 1 from all other nodes:
+peerTransport.setRule({
+  action: 'partition',
+  blockedPeers: ['B1', 'B2', 'B3', 'G2', 'G3'],
+});
+
+// Or inject 1500ms 4G network delay:
+peerTransport.setRule({
+  action: 'delay',
+  durationMs: 1500,
+});
+
+// Restore normal connectivity:
+peerTransport.reset();
+```
