@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS events (
   starts_at TEXT NOT NULL,
   capacity INTEGER NOT NULL CHECK(capacity >= 0),
   price REAL NOT NULL DEFAULT 0.0 CHECK(price >= 0),
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('draft', 'published', 'active', 'completed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('draft', 'published', 'active', 'completed', 'cancelled', 'on_sale', 'closed')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

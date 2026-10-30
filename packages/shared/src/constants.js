@@ -26,6 +26,8 @@ const EVENT_STATUS = Object.freeze({
   ACTIVE: 'active',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
+  ON_SALE: 'on_sale',
+  CLOSED: 'closed',
 });
 
 const CHECKIN_MODE = Object.freeze({
@@ -46,6 +48,7 @@ const PEER_STATUS = Object.freeze({
 });
 
 const OP_TYPES = Object.freeze({
+  EVENT_UPSERT: 'EVENT_UPSERT',
   TICKET_ISSUED: 'TICKET_ISSUED',
   TICKET_REVOKED: 'TICKET_REVOKED',
   CHECKIN_RECORDED: 'CHECKIN_RECORDED',

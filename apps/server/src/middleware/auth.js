@@ -1,7 +1,5 @@
 /**
  * Authentication & Authorization Middleware
- *
- * TODO(stage-2): Implement complete JWT extraction, verification, and database user lookup.
  */
 
 const jwt = require('jsonwebtoken');
@@ -38,7 +36,7 @@ function authenticate(req, _res, next) {
 }
 
 /**
- * Requires specified user roles
+ * Requires specified user roles (e.g. 'admin', 'booth_staff', 'gate_staff')
  * @param  {...string} allowedRoles
  */
 function requireRoles(...allowedRoles) {
@@ -61,7 +59,30 @@ function requireRoles(...allowedRoles) {
   };
 }
 
+/**
+ * Requires specified node roles (e.g. 'booth' or 'both')
+ * Gate nodes will be rejected with 403 FORBIDDEN.
+ * @param  {...string} allowedNodeRoles
+ */
+function requireNodeRole(...allowedNodeRoles) {
+  return (_req, _res, next) => {
+    const currentRole = config.nodeRole;
+    if (currentRole === 'both' || allowedNodeRoles.includes(currentRole)) {
+      return next();
+    }
+
+    return next(
+      new AppError(
+        `Action forbidden for node role '${currentRole}'. Requires one of [${allowedNodeRoles.join(', ')}]`,
+        403,
+        ERROR_CODES.FORBIDDEN
+      )
+    );
+  };
+}
+
 module.exports = {
   authenticate,
   requireRoles,
+  requireNodeRole,
 };

@@ -1,27 +1,34 @@
 /**
- * Ticket Issuance and Lookup Routes (Stub for Stage 2)
- *
- * TODO(stage-2): Implement booth-side ticket sale, local quota decrement,
- * Ed25519 token signing, and lookup by email/phone.
+ * Ticket Issuance and Lookup Routes
  */
 
 const express = require('express');
 const {
   issueTicketSchema,
+  bulkIssueTicketsSchema,
   revokeTicketSchema,
   ticketLookupQuerySchema,
+  ERROR_CODES,
 } = require('@festpass/shared');
 const ticketService = require('../services/ticketService');
-const { getDb } = require('../db');
+const { authenticate, requireRoles, requireNodeRole } = require('../middleware/auth');
+const { AppError } = require('../middleware/errorHandler');
 
 const router = express.Router();
 
-// POST /api/tickets/issue
-router.post('/issue', async (req, res, next) => {
+/**
+ * Common handler for ticket issuing
+ */
+async function handleIssueTicket(req, res, next) {
   try {
     const validated = issueTicketSchema.parse(req.body);
-    // TODO(stage-2): Decrement quota for this booth node and issue signed ticket
-    const ticket = await ticketService.issueTicket(validated);
+    const idempotencyKey = req.headers['idempotency-key'] || null;
+
+    const ticket = await ticketService.issueTicket({
+      ...validated,
+      idempotencyKey,
+    });
+
     res.status(201).json({
       success: true,
       ticket,
@@ -29,14 +36,57 @@ router.post('/issue', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+}
 
-// GET /api/tickets/:id
+// POST /tickets/issue and POST /tickets (booth_staff or admin, booth nodes only)
+router.post(
+  '/issue',
+  authenticate,
+  requireRoles('booth_staff', 'admin'),
+  requireNodeRole('booth'),
+  handleIssueTicket
+);
+router.post(
+  '/',
+  authenticate,
+  requireRoles('booth_staff', 'admin'),
+  requireNodeRole('booth'),
+  handleIssueTicket
+);
+
+// POST /tickets/bulk - Bulk issue for group bookings (up to 20 tickets in 1 transaction)
+router.post(
+  '/bulk',
+  authenticate,
+  requireRoles('booth_staff', 'admin'),
+  requireNodeRole('booth'),
+  async (req, res, next) => {
+    try {
+      const validated = bulkIssueTicketsSchema.parse(req.body);
+      const idempotencyKey = req.headers['idempotency-key'] || null;
+
+      const result = await ticketService.issueBulkTickets({
+        ...validated,
+        idempotencyKey,
+      });
+
+      res.status(201).json({
+        success: true,
+        count: result.count,
+        tickets: result.tickets,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// GET /tickets/:id - Get ticket by ID
 router.get('/:id', async (req, res, next) => {
   try {
     const ticket = await ticketService.getTicketById(req.params.id);
     if (!ticket) {
-      return res.status(404).json({ success: false, error: { message: 'Ticket not found' } });
+      throw new AppError(`Ticket with id '${req.params.id}' not found`, 404, ERROR_CODES.NOT_FOUND);
     }
     res.status(200).json({ success: true, ticket });
   } catch (err) {
@@ -44,36 +94,24 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-// GET /api/tickets (lookup by holder email, phone, or event)
-router.get('/', (req, res, next) => {
-  try {
-    const query = ticketLookupQuerySchema.parse(req.query);
-    const db = getDb();
-    let sql = 'SELECT * FROM tickets WHERE 1=1';
-    const params = [];
-
-    if (query.email) {
-      sql += ' AND holder_email = ?';
-      params.push(query.email);
+// GET /tickets - Query tickets by holder email, phone, or eventId
+router.get(
+  '/',
+  authenticate,
+  requireRoles('booth_staff', 'gate_staff', 'admin'),
+  (req, res, next) => {
+    try {
+      const query = ticketLookupQuerySchema.parse(req.query);
+      const tickets = ticketService.queryTickets(query);
+      res.status(200).json({ success: true, tickets });
+    } catch (err) {
+      next(err);
     }
-    if (query.phone) {
-      sql += ' AND holder_phone = ?';
-      params.push(query.phone);
-    }
-    if (query.eventId) {
-      sql += ' AND event_id = ?';
-      params.push(query.eventId);
-    }
-
-    const tickets = db.prepare(sql).all(...params);
-    res.status(200).json({ success: true, tickets });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
-// POST /api/tickets/:id/revoke
-router.post('/:id/revoke', async (req, res, next) => {
+// POST /tickets/:id/revoke - Revoke ticket (admin only)
+router.post('/:id/revoke', authenticate, requireRoles('admin'), async (req, res, next) => {
   try {
     const validated = revokeTicketSchema.parse(req.body);
     const result = await ticketService.revokeTicket(req.params.id, validated.reason);

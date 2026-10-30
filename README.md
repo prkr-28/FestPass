@@ -51,13 +51,25 @@ Install all monorepo dependencies across `packages/shared`, `apps/server`, and `
 npm install
 ```
 
-### 2. Cryptographic Key Generation
+### 2. Cryptographic Key Generation & Database Seed
 
 Generate the Ed25519 keypair for ticket signing and offline verification. This creates `keys/ed25519-private.pem`, `keys/ed25519-public.pem`, and a local `.env`:
 
 ```bash
 npm run keygen
 ```
+
+Populate initial staff accounts and sample events across all node databases:
+
+```bash
+npm run seed
+```
+
+Default credentials:
+
+- Admin: `admin@campus.edu` / `AdminPass123!`
+- Booth Staff: `booth1@campus.edu`, `booth2@campus.edu` / `BoothPass123!`
+- Gate Staff: `gate1@campus.edu`, `gate2@campus.edu` / `GatePass123!`
 
 ### 3. Start the 6-Node Cluster
 
@@ -127,7 +139,7 @@ npm run format        # Auto-format all files
 | Stage       | Focus                                            | Owner    | Status   |
 | ----------- | ------------------------------------------------ | -------- | -------- |
 | **Stage 1** | Foundation & Core Primitives                     | Member 1 | **DONE** |
-| **Stage 2** | Auth, Events & Booth Ticket Sales                | Member 2 | PENDING  |
+| **Stage 2** | Auth, Events & Booth Ticket Sales                | Member 2 | **DONE** |
 | **Stage 3** | Peer Membership, Failure Detection & Replication | Member 3 | PENDING  |
 | **Stage 4** | Gate Validation, Quorum & Conflict Resolution    | Member 4 | PENDING  |
 | **Stage 5** | Admin Dashboard, Booth UI & Failover Client      | Member 5 | PENDING  |

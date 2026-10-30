@@ -1,38 +1,53 @@
 /**
- * Events CRUD Routes (Stub for Stage 2)
- *
- * TODO(stage-2): Implement event creation, updating, quota allocation across booth nodes,
- * and listing active events.
+ * Events CRUD Routes
  */
 
 const express = require('express');
-const { createEventSchema, updateEventSchema } = require('@festpass/shared');
-const { getDb } = require('../db');
+const { createEventSchema, updateEventSchema, ERROR_CODES } = require('@festpass/shared');
+const eventService = require('../services/eventService');
+const { authenticate, requireRoles } = require('../middleware/auth');
+const { AppError } = require('../middleware/errorHandler');
 
 const router = express.Router();
 
-// GET /api/events
-router.get('/', (_req, res, next) => {
+// GET /events (or /api/events) - list events with search and pagination
+router.get('/', (req, res, next) => {
   try {
-    const db = getDb();
-    const events = db.prepare('SELECT * FROM events ORDER BY starts_at ASC').all();
-    res.status(200).json({ success: true, events });
+    const { page, limit, search, q, status } = req.query;
+    const result = eventService.listEvents({
+      page,
+      limit,
+      search: search || q || '',
+      status,
+    });
+
+    res.status(200).json({
+      success: true,
+      events: result.events,
+      pagination: result.pagination,
+    });
   } catch (err) {
     next(err);
   }
 });
 
-// POST /api/events
-router.post('/', (req, res, next) => {
+// POST /events (or /api/events) - create event (admin only)
+router.post('/', authenticate, requireRoles('admin'), (req, res, next) => {
   try {
     const validated = createEventSchema.parse(req.body);
-    // TODO(stage-2): Insert event into SQLite and partition quotas across booth nodes
+    const result = eventService.upsertEvent(validated);
+
     res.status(201).json({
       success: true,
-      message: 'TODO(stage-2): Create event',
       event: {
-        id: 'evt_stub',
-        ...validated,
+        id: result.event.id,
+        name: result.event.name,
+        venue: result.event.venue,
+        starts_at: result.event.starts_at,
+        capacity: result.event.capacity,
+        price: result.event.price,
+        status: result.event.status,
+        quotas: result.quotas,
       },
     });
   } catch (err) {
@@ -40,31 +55,47 @@ router.post('/', (req, res, next) => {
   }
 });
 
-// GET /api/events/:id
+// GET /events/:id (or /api/events/:id) - get event by ID
 router.get('/:id', (req, res, next) => {
   try {
-    const db = getDb();
-    const event = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
+    const event = eventService.getEventById(req.params.id);
     if (!event) {
-      return res.status(404).json({ success: false, error: { message: 'Event not found' } });
+      throw new AppError(`Event with id '${req.params.id}' not found`, 404, ERROR_CODES.NOT_FOUND);
     }
-    const quotas = db.prepare('SELECT * FROM booth_quotas WHERE event_id = ?').all(req.params.id);
-    res.status(200).json({ success: true, event: { ...event, quotas } });
+
+    res.status(200).json({
+      success: true,
+      event,
+    });
   } catch (err) {
     next(err);
   }
 });
 
-// PUT /api/events/:id
-router.put('/:id', (req, res, next) => {
+// PUT /events/:id (or /api/events/:id) - update event (admin only)
+router.put('/:id', authenticate, requireRoles('admin'), (req, res, next) => {
   try {
     const validated = updateEventSchema.parse(req.body);
-    // TODO(stage-2): Update event details
+    const result = eventService.upsertEvent(validated, req.params.id);
+
     res.status(200).json({
       success: true,
-      message: 'TODO(stage-2): Update event',
       id: req.params.id,
+      event: result.event,
       updated: validated,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /events/:id (or /api/events/:id) - delete event (admin only)
+router.delete('/:id', authenticate, requireRoles('admin'), (req, res, next) => {
+  try {
+    eventService.deleteEvent(req.params.id);
+    res.status(200).json({
+      success: true,
+      message: `Event '${req.params.id}' deleted successfully`,
     });
   } catch (err) {
     next(err);

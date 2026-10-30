@@ -25,6 +25,8 @@ const createEventSchema = z.object({
       EVENT_STATUS.ACTIVE,
       EVENT_STATUS.COMPLETED,
       EVENT_STATUS.CANCELLED,
+      EVENT_STATUS.ON_SALE,
+      EVENT_STATUS.CLOSED,
     ])
     .default(EVENT_STATUS.ACTIVE),
   quotas: z.record(z.string(), z.number().int().nonnegative()).optional(),
@@ -38,6 +40,17 @@ const issueTicketSchema = z.object({
   holderName: z.string().trim().min(2, 'holderName must have at least 2 characters'),
   holderEmail: z.string().trim().email('Invalid holderEmail'),
   holderPhone: z.string().trim().min(7, 'holderPhone must have at least 7 digits'),
+});
+
+const bulkIssueItemSchema = z.object({
+  holderName: z.string().trim().min(2, 'holderName must have at least 2 characters'),
+  holderEmail: z.string().trim().email('Invalid holderEmail'),
+  holderPhone: z.string().trim().min(7, 'holderPhone must have at least 7 digits'),
+});
+
+const bulkIssueTicketsSchema = z.object({
+  eventId: z.string().trim().min(1, 'eventId is required'),
+  tickets: z.array(bulkIssueItemSchema).min(1).max(20, 'Maximum 20 tickets per bulk transaction'),
 });
 
 const revokeTicketSchema = z.object({
@@ -94,6 +107,7 @@ const opLogEntrySchema = z.object({
   originNode: z.string().trim().min(1),
   hlc: z.string().trim().min(1),
   type: z.enum([
+    OP_TYPES.EVENT_UPSERT,
     OP_TYPES.TICKET_ISSUED,
     OP_TYPES.TICKET_REVOKED,
     OP_TYPES.CHECKIN_RECORDED,
@@ -109,6 +123,14 @@ const claimQuotaSchema = z.object({
   amount: z.number().int().positive('Claim amount must be positive'),
 });
 
+const borrowQuotaSchema = z.object({
+  eventId: z.string().trim().min(1, 'eventId is required'),
+  amount: z.number().int().positive('Borrow amount must be positive'),
+  peerNodeId: z.string().trim().optional(),
+  targetNodeId: z.string().trim().optional(),
+  requesterNodeId: z.string().trim().optional(),
+});
+
 const chaosSchema = z.object({
   action: z.enum(['delay', 'partition', 'drop', 'reset']),
   targetNodeId: z.string().trim().optional(),
@@ -121,6 +143,8 @@ module.exports = {
   createEventSchema,
   updateEventSchema,
   issueTicketSchema,
+  bulkIssueItemSchema,
+  bulkIssueTicketsSchema,
   revokeTicketSchema,
   ticketLookupQuerySchema,
   scanTicketSchema,
@@ -131,5 +155,6 @@ module.exports = {
   syncRequestSchema,
   opLogEntrySchema,
   claimQuotaSchema,
+  borrowQuotaSchema,
   chaosSchema,
 };

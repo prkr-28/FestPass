@@ -13,6 +13,7 @@ const healthRoutes = require('./routes/health');
 const authRoutes = require('./routes/auth');
 const eventsRoutes = require('./routes/events');
 const ticketsRoutes = require('./routes/tickets');
+const statsRoutes = require('./routes/stats');
 const gateRoutes = require('./routes/gate');
 const clusterRoutes = require('./routes/cluster');
 const internalRoutes = require('./routes/internal');
@@ -32,19 +33,33 @@ function createApp() {
   // Rate Limiting (permissive for local cluster simulation)
   const limiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 2000,
+    max: 5000,
     standardHeaders: true,
     legacyHeaders: false,
   });
   app.use(limiter);
 
-  // Mount Routes
+  // Mount Routes (supporting both /api/* and direct root paths per API contract)
   app.use('/', healthRoutes); // /health and /node/info
+
   app.use('/api/auth', authRoutes);
+  app.use('/auth', authRoutes);
+
   app.use('/api/events', eventsRoutes);
+  app.use('/events', eventsRoutes);
+
   app.use('/api/tickets', ticketsRoutes);
+  app.use('/tickets', ticketsRoutes);
+
+  app.use('/api/stats', statsRoutes);
+  app.use('/stats', statsRoutes);
+
   app.use('/api/gate', gateRoutes);
+  app.use('/gate', gateRoutes);
+
   app.use('/api/cluster', clusterRoutes);
+  app.use('/cluster', clusterRoutes);
+
   app.use('/internal', internalRoutes);
 
   // 404 Handler

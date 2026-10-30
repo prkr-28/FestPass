@@ -15,6 +15,12 @@ module.exports = defineWorkspace([
       root: './apps/server',
       globals: true,
       environment: 'node',
+      pool: 'threads',
+      poolOptions: {
+        threads: {
+          singleThread: true,
+        },
+      },
     },
   },
 ]);
