@@ -43,6 +43,7 @@ const CHECKIN_RESULT = Object.freeze({
 
 const PEER_STATUS = Object.freeze({
   HEALTHY: 'healthy',
+  ALIVE: 'alive',
   SUSPECT: 'suspect',
   DEAD: 'dead',
 });

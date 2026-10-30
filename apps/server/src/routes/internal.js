@@ -15,13 +15,36 @@ const {
   claimQuotaSchema,
   borrowQuotaSchema,
   chaosSchema,
+  replicateSchema,
 } = require('@festpass/shared');
 const config = require('../config');
 const replicationService = require('../services/replicationService');
+const peerTransport = require('../services/peerTransport');
 const hlcService = require('../services/hlcService');
 const ticketService = require('../services/ticketService');
 
 const router = express.Router();
+
+// Middleware: Check inbound chaos (e.g. simulated network partition or drop)
+router.use(async (req, res, next) => {
+  try {
+    // Skip chaos check for chaos control endpoints
+    if (req.path === '/chaos') return next();
+
+    const originNodeId =
+      req.headers['x-festpass-node-id'] ||
+      req.body?.originNodeId ||
+      req.body?.requesterNodeId ||
+      null;
+
+    if (originNodeId) {
+      await peerTransport.checkInboundChaos(originNodeId);
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // POST /internal/gossip
 router.post('/gossip', async (req, res, next) => {
@@ -108,15 +131,43 @@ router.post('/claim', async (req, res, next) => {
   }
 });
 
-// POST /internal/chaos (for demo & chaos testing in Stage 6)
+// POST /internal/replicate - Eager push replication receiver
+router.post('/replicate', async (req, res, next) => {
+  try {
+    const validated = replicateSchema.parse(req.body);
+    // Advance local clock with remote message
+    if (validated.hlc) {
+      hlcService.receive(validated.hlc);
+    }
+    const result = await replicationService.handleReplicate(validated);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /internal/chaos (Admin & testing hook for simulating partitions, delays, and drops)
 router.post('/chaos', (req, res, next) => {
   try {
     const validated = chaosSchema.parse(req.body);
-    // TODO(stage-6): Hook into artificial network delay / partition middleware
+    const currentState = peerTransport.applyChaos(validated);
     res.status(200).json({
       success: true,
-      message: 'Chaos configuration accepted (Stage 6 hook)',
+      message: `Chaos configuration accepted: action=${validated.action}`,
       chaos: validated,
+      currentState,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /internal/chaos - View current active chaos state
+router.get('/chaos', (_req, res, next) => {
+  try {
+    res.status(200).json({
+      success: true,
+      chaos: peerTransport.getChaosState(),
     });
   } catch (err) {
     next(err);

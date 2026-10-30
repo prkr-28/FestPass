@@ -88,18 +88,36 @@ const peerHeartbeatSchema = z.object({
   url: z.string().url(),
   role: z.enum([NODE_ROLES.BOOTH, NODE_ROLES.GATE, NODE_ROLES.BOTH]),
   lastSeen: z.union([z.string(), z.number()]),
+  status: z.string().optional(),
 });
 
 const gossipSchema = z.object({
   originNodeId: z.string().trim().min(1),
   hlc: z.string().trim().min(1),
+  role: z.string().optional(),
   peers: z.array(peerHeartbeatSchema),
 });
 
 const syncRequestSchema = z.object({
   fromHlc: z.string().trim().optional(),
+  versionVector: z.record(z.string()).optional(),
   originNodeId: z.string().trim().min(1),
   limit: z.number().int().positive().max(500).default(100),
+});
+
+const replicateSchema = z.object({
+  originNodeId: z.string().trim().min(1),
+  hlc: z.string().trim().min(1),
+  ops: z.array(
+    z.object({
+      op_id: z.string().trim().min(1),
+      origin_node: z.string().trim().min(1),
+      hlc: z.string().trim().min(1),
+      type: z.string().trim().min(1),
+      payload_json: z.string().trim().min(2),
+      applied_at: z.string().trim().optional(),
+    })
+  ),
 });
 
 const opLogEntrySchema = z.object({
@@ -135,6 +153,8 @@ const chaosSchema = z.object({
   action: z.enum(['delay', 'partition', 'drop', 'reset']),
   targetNodeId: z.string().trim().optional(),
   delayMs: z.number().int().nonnegative().optional(),
+  dropRate: z.number().min(0).max(1).optional(),
+  percentage: z.number().min(0).max(100).optional(),
   enabled: z.boolean().optional(),
 });
 
@@ -157,4 +177,5 @@ module.exports = {
   claimQuotaSchema,
   borrowQuotaSchema,
   chaosSchema,
+  replicateSchema,
 };
