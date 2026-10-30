@@ -13,19 +13,17 @@ const config = require('../config');
 const logger = require('../logger');
 const { getDb } = require('../db');
 
-class AppError extends Error {
-  constructor(message, status = 500, code = ERROR_CODES.INTERNAL_ERROR, details = null) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
+const { AppError } = require('../middleware/errorHandler');
 
-// Active chaos state
-const partitions = new Set();
-const delays = new Map();
-const dropRates = new Map();
+// Active chaos state (shared on global to guarantee singleton across ESM/CJS boundaries)
+if (!global.__festpass_chaos) {
+  global.__festpass_chaos = {
+    partitions: new Set(),
+    delays: new Map(),
+    dropRates: new Map(),
+  };
+}
+const { partitions, delays, dropRates } = global.__festpass_chaos;
 
 /**
  * Configure chaos simulation rules

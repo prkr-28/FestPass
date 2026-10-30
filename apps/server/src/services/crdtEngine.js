@@ -223,6 +223,13 @@ function applyTicketIssued(db, op, payload) {
     return;
   }
 
+  // Ensure event exists to satisfy foreign key constraint during out-of-order replication
+  db.prepare(`
+    INSERT INTO events (id, name, venue, starts_at, capacity, price, status, created_at)
+    VALUES (?, 'Pending Replication Event', 'TBD', datetime('now'), 0, 0, 'draft', datetime('now'))
+    ON CONFLICT(id) DO NOTHING
+  `).run(eventId);
+
   db.prepare(`
     INSERT INTO tickets (id, event_id, holder_name, holder_email, holder_phone, issued_by_node, issued_at_hlc, status, token, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'valid', ?, datetime('now'))
@@ -257,6 +264,13 @@ function applyTicketRevoked(db, op, payload) {
   if (existing) {
     db.prepare('UPDATE tickets SET status = ? WHERE id = ?').run(TICKET_STATUS.REVOKED, ticketId);
   } else {
+    const eventId = payload.eventId || 'unknown_event';
+    db.prepare(`
+      INSERT INTO events (id, name, venue, starts_at, capacity, price, status, created_at)
+      VALUES (?, 'Pending Replication Event', 'TBD', datetime('now'), 0, 0, 'draft', datetime('now'))
+      ON CONFLICT(id) DO NOTHING
+    `).run(eventId);
+
     // Out-of-order delivery: insert stub marked revoked so when TICKET_ISSUED arrives, it remains revoked
     db.prepare(`
       INSERT INTO tickets (id, event_id, holder_name, holder_email, holder_phone, issued_by_node, issued_at_hlc, status, token, created_at)
@@ -264,7 +278,7 @@ function applyTicketRevoked(db, op, payload) {
       ON CONFLICT(id) DO UPDATE SET status = ?
     `).run(
       ticketId,
-      payload.eventId || 'unknown_event',
+      eventId,
       op.origin_node,
       payload.revokedAtHlc || op.hlc,
       TICKET_STATUS.REVOKED,

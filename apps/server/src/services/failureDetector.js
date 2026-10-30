@@ -27,6 +27,9 @@ class FailureDetector {
     this.suspectTimeoutMs = options.suspectTimeoutMs || DEFAULT_SUSPECT_TIMEOUT_MS;
     this.deadTimeoutMs = options.deadTimeoutMs || DEFAULT_DEAD_TIMEOUT_MS;
 
+    // Custom db instance for isolated test environments
+    this.db = options.db || null;
+
     // In-memory tracking of last seen physical timestamp (ms)
     // Map<nodeId, number>
     this.lastSeenMap = new Map();
@@ -35,6 +38,10 @@ class FailureDetector {
 
     // Listeners for peer status changes (nodeId, oldStatus, newStatus)
     this.listeners = new Set();
+  }
+
+  getDatabase() {
+    return this.db || getDb();
   }
 
   /**
@@ -94,7 +101,7 @@ class FailureDetector {
    */
   initPeersFromConfig() {
     try {
-      const db = getDb();
+      const db = this.getDatabase();
       const peers = config.getPeerList();
       const nowIso = new Date().toISOString();
 
@@ -130,7 +137,7 @@ class FailureDetector {
     this.lastSeenMap.set(nodeId, nowMs);
 
     try {
-      const db = getDb();
+      const db = this.getDatabase();
       const current = db.prepare('SELECT status, role, url FROM peers WHERE node_id = ?').get(nodeId);
 
       const oldStatus = current ? current.status : null;
@@ -178,7 +185,7 @@ class FailureDetector {
 
     // Merge reported peers if they are newer
     try {
-      const db = getDb();
+      const db = this.getDatabase();
       for (const peer of peers) {
         if (!peer.nodeId || peer.nodeId === config.nodeId) continue;
 
@@ -220,7 +227,7 @@ class FailureDetector {
    */
   evaluateStates() {
     const nowMs = Date.now();
-    const db = getDb();
+    const db = this.getDatabase();
     const allPeers = db.prepare('SELECT node_id, status, last_seen FROM peers').all();
 
     for (const peer of allPeers) {
@@ -284,7 +291,7 @@ class FailureDetector {
     this.evaluateStates();
 
     // 2. Broadcast gossip heartbeats to all configured peers
-    const db = getDb();
+    const db = this.getDatabase();
     const peers = db.prepare('SELECT node_id, url, role, last_seen, status FROM peers WHERE node_id != ?').all(config.nodeId);
 
     const gossipPayload = {
@@ -316,7 +323,7 @@ class FailureDetector {
    * Get all peer states as an array
    */
   getPeerStates() {
-    const db = getDb();
+    const db = this.getDatabase();
     return db.prepare('SELECT * FROM peers ORDER BY node_id ASC').all();
   }
 
@@ -326,7 +333,7 @@ class FailureDetector {
   isAlive(nodeId) {
     if (nodeId === config.nodeId) return true;
     try {
-      const db = getDb();
+      const db = this.getDatabase();
       const row = db.prepare('SELECT status FROM peers WHERE node_id = ?').get(nodeId);
       return row ? row.status === PEER_STATUS.ALIVE || row.status === PEER_STATUS.HEALTHY : false;
     } catch (_e) {
