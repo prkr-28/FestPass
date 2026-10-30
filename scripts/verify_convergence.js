@@ -53,9 +53,13 @@ function computeTableChecksum(db, tableName, orderCol = 'id') {
 }
 
 function runVerification() {
-  console.log('\n========================================================================================');
+  console.log(
+    '\n========================================================================================'
+  );
   console.log(' FestPass Cluster Convergence Verification (Stage 3)');
-  console.log('========================================================================================\n');
+  console.log(
+    '========================================================================================\n'
+  );
 
   const results = [];
   const eventChecksums = new Set();
@@ -128,19 +132,31 @@ function runVerification() {
     }))
   );
 
-  const eventsConverged = eventChecksums.size === 1 && !eventChecksums.has('ERR') && !eventChecksums.has('N/A');
-  const ticketsConverged = ticketChecksums.size === 1 && !ticketChecksums.has('ERR') && !ticketChecksums.has('N/A');
+  const eventsConverged =
+    eventChecksums.size === 1 && !eventChecksums.has('ERR') && !eventChecksums.has('N/A');
+  const ticketsConverged =
+    ticketChecksums.size === 1 && !ticketChecksums.has('ERR') && !ticketChecksums.has('N/A');
 
-  console.log('\n----------------------------------------------------------------------------------------');
-  console.log(`Events Table Status:  ${eventsConverged ? '✓ CONVERGED (Identical across all nodes)' : '⚠ MISMATCHED'}`);
-  console.log(`Tickets Table Status: ${ticketsConverged ? '✓ CONVERGED (Identical across all nodes)' : '⚠ MISMATCHED'}`);
-  console.log('----------------------------------------------------------------------------------------\n');
+  console.log(
+    '\n----------------------------------------------------------------------------------------'
+  );
+  console.log(
+    `Events Table Status:  ${eventsConverged ? '✓ CONVERGED (Identical across all nodes)' : '⚠ MISMATCHED'}`
+  );
+  console.log(
+    `Tickets Table Status: ${ticketsConverged ? '✓ CONVERGED (Identical across all nodes)' : '⚠ MISMATCHED'}`
+  );
+  console.log(
+    '----------------------------------------------------------------------------------------\n'
+  );
 
   if (eventsConverged && ticketsConverged) {
     console.log('RESULT: Cluster is fully converged and consistent!\n');
     return true;
   } else {
-    console.log('RESULT: Differences detected across replicas. Trigger anti-entropy sync to converge.\n');
+    console.log(
+      'RESULT: Differences detected across replicas. Trigger anti-entropy sync to converge.\n'
+    );
     return false;
   }
 }

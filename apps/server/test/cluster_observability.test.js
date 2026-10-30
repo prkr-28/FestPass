@@ -2,10 +2,8 @@
  * Integration Tests: Cluster Observability & Telemetry Endpoints (Stage 3)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import request from 'supertest';
-import { createApp } from '../src/app';
-import { getDb } from '../src/db';
+const request = require('supertest');
+const { createApp } = require('../src/app');
 
 describe('Cluster Observability Endpoints', () => {
   let app;

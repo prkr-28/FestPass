@@ -138,13 +138,16 @@ class FailureDetector {
 
     try {
       const db = this.getDatabase();
-      const current = db.prepare('SELECT status, role, url FROM peers WHERE node_id = ?').get(nodeId);
+      const current = db
+        .prepare('SELECT status, role, url FROM peers WHERE node_id = ?')
+        .get(nodeId);
 
       const oldStatus = current ? current.status : null;
       const targetRole = role || current?.role || (nodeId.startsWith('B') ? 'booth' : 'gate');
       const targetUrl = url || current?.url || peerTransport.resolvePeerUrl(nodeId) || '';
 
-      db.prepare(`
+      db.prepare(
+        `
         INSERT INTO peers (node_id, url, role, last_seen, status)
         VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(node_id) DO UPDATE SET
@@ -152,7 +155,8 @@ class FailureDetector {
           status = excluded.status,
           role = coalesce(excluded.role, peers.role),
           url = coalesce(nullif(excluded.url, ''), peers.url)
-      `).run(nodeId, targetUrl, targetRole, nowIso, PEER_STATUS.ALIVE);
+      `
+      ).run(nodeId, targetUrl, targetRole, nowIso, PEER_STATUS.ALIVE);
 
       if (oldStatus && oldStatus !== PEER_STATUS.ALIVE && oldStatus !== PEER_STATUS.HEALTHY) {
         logger.info(
@@ -201,13 +205,15 @@ class FailureDetector {
         }
 
         // Ensure peer exists in peers table
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO peers (node_id, url, role, last_seen, status)
           VALUES (?, ?, ?, ?, ?)
           ON CONFLICT(node_id) DO UPDATE SET
             role = coalesce(excluded.role, peers.role),
             url = coalesce(nullif(excluded.url, ''), peers.url)
-        `).run(
+        `
+        ).run(
           peer.nodeId,
           peer.url || '',
           peer.role || (peer.nodeId.startsWith('B') ? 'booth' : 'gate'),
@@ -249,7 +255,10 @@ class FailureDetector {
       }
 
       // If status changed, update DB and trigger listeners
-      if (newStatus !== peer.status && (peer.status !== PEER_STATUS.HEALTHY || newStatus !== PEER_STATUS.ALIVE)) {
+      if (
+        newStatus !== peer.status &&
+        (peer.status !== PEER_STATUS.HEALTHY || newStatus !== PEER_STATUS.ALIVE)
+      ) {
         logger.warn(
           { nodeId: peer.node_id, oldStatus: peer.status, newStatus, elapsedMs: elapsed },
           'Peer failure detector state changed'
@@ -292,7 +301,9 @@ class FailureDetector {
 
     // 2. Broadcast gossip heartbeats to all configured peers
     const db = this.getDatabase();
-    const peers = db.prepare('SELECT node_id, url, role, last_seen, status FROM peers WHERE node_id != ?').all(config.nodeId);
+    const peers = db
+      .prepare('SELECT node_id, url, role, last_seen, status FROM peers WHERE node_id != ?')
+      .all(config.nodeId);
 
     const gossipPayload = {
       originNodeId: config.nodeId,
@@ -310,7 +321,9 @@ class FailureDetector {
     // Gossip to each peer
     for (const peer of peers) {
       try {
-        await peerTransport.post(peer.node_id, '/internal/gossip', gossipPayload, { timeoutMs: 1500 });
+        await peerTransport.post(peer.node_id, '/internal/gossip', gossipPayload, {
+          timeoutMs: 1500,
+        });
         // If peer responded with 200 OK, mark it alive immediately
         this.recordPeerAlive(peer.node_id, peer.role, peer.url);
       } catch (_err) {

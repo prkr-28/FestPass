@@ -98,11 +98,13 @@ class ReplicationService {
   getVersionVector() {
     const db = getDb();
     const rows = db
-      .prepare(`
+      .prepare(
+        `
         SELECT origin_node, MAX(hlc) as max_hlc
         FROM op_log
         GROUP BY origin_node
-      `)
+      `
+      )
       .all();
 
     const vector = {};
@@ -118,11 +120,13 @@ class ReplicationService {
   getOutboxSizes() {
     const db = getDb();
     const rows = db
-      .prepare(`
+      .prepare(
+        `
         SELECT peer_node_id, count(*) as count
         FROM outbox
         GROUP BY peer_node_id
-      `)
+      `
+      )
       .all();
 
     const sizes = {};
@@ -139,13 +143,15 @@ class ReplicationService {
     if (!peerNodeId || peerNodeId === config.nodeId) return;
     try {
       const db = getDb();
-      db.prepare(`
+      db.prepare(
+        `
         INSERT INTO outbox (peer_node_id, op_id, attempts, last_attempt_at, created_at)
         VALUES (?, ?, 0, datetime('now'), datetime('now'))
         ON CONFLICT(peer_node_id, op_id) DO UPDATE SET
           attempts = attempts + 1,
           last_attempt_at = datetime('now')
-      `).run(peerNodeId, opId);
+      `
+      ).run(peerNodeId, opId);
     } catch (err) {
       logger.warn({ peerNodeId, opId, err: err.message }, 'Failed to queue op to outbox');
     }
@@ -170,7 +176,10 @@ class ReplicationService {
   notifyNewOp(op) {
     if (!this.isRunning) return;
     this.pushOp(op).catch((err) => {
-      logger.debug({ opId: op.op_id, err: err.message }, 'Eager push encountered error; buffered in outbox');
+      logger.debug(
+        { opId: op.op_id, err: err.message },
+        'Eager push encountered error; buffered in outbox'
+      );
     });
   }
 
@@ -179,9 +188,7 @@ class ReplicationService {
    */
   async pushOp(op) {
     const db = getDb();
-    const peers = db
-      .prepare('SELECT node_id FROM peers WHERE node_id != ?')
-      .all(config.nodeId);
+    const peers = db.prepare('SELECT node_id FROM peers WHERE node_id != ?').all(config.nodeId);
 
     const pushPromises = peers.map(async (peer) => {
       const peerNodeId = peer.node_id;
@@ -253,14 +260,16 @@ class ReplicationService {
       if (!failureDetector.isAlive(peer.node_id)) continue;
 
       const pendingRows = db
-        .prepare(`
+        .prepare(
+          `
           SELECT o.op_id, l.origin_node, l.hlc, l.type, l.payload_json, l.applied_at
           FROM outbox o
           JOIN op_log l ON o.op_id = l.op_id
           WHERE o.peer_node_id = ?
           ORDER BY l.hlc ASC
           LIMIT 100
-        `)
+        `
+        )
         .all(peer.node_id);
 
       if (pendingRows.length === 0) continue;
@@ -382,9 +391,7 @@ class ReplicationService {
    */
   async syncAllPeers() {
     const db = getDb();
-    const peers = db
-      .prepare('SELECT node_id FROM peers WHERE node_id != ?')
-      .all(config.nodeId);
+    const peers = db.prepare('SELECT node_id FROM peers WHERE node_id != ?').all(config.nodeId);
 
     for (const peer of peers) {
       if (failureDetector.isAlive(peer.node_id)) {

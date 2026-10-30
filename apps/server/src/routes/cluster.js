@@ -27,7 +27,8 @@ router.get('/nodes', (_req, res, next) => {
     const nowMs = Date.now();
 
     const peersWithLag = peers.map((peer) => {
-      const lastSeenMs = failureDetector.lastSeenMap.get(peer.node_id) || Date.parse(peer.last_seen) || nowMs;
+      const lastSeenMs =
+        failureDetector.lastSeenMap.get(peer.node_id) || Date.parse(peer.last_seen) || nowMs;
       const replicationLagMs = Math.max(0, nowMs - lastSeenMs);
       const replicationLagOps = outboxSizes[peer.node_id] || 0;
 

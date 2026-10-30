@@ -2,13 +2,11 @@
  * Convergence, Partition-Heal, and Anti-Entropy Catch-Up Tests (Stage 3)
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
-import crypto from 'crypto';
-import { OP_TYPES } from '@festpass/shared';
-import { runMigrations } from '../src/db/migrator';
-import { applyBatch } from '../src/services/crdtEngine';
-import { ReplicationService } from '../src/services/replicationService';
+const Database = require('better-sqlite3');
+const crypto = require('crypto');
+const { OP_TYPES } = require('@festpass/shared');
+const { runMigrations } = require('../src/db/migrator');
+const { applyBatch } = require('../src/services/crdtEngine');
 
 /**
  * Computes an MD5 checksum of a table's ordered rows for convergence verification
@@ -208,8 +206,12 @@ describe('Cluster Convergence & Partition-Heal (Stage 3)', () => {
     applyBatch(dbB3, [opPartB2]);
 
     // While partitioned: B1 does not have B2's ticket, and B2 does not have B1's ticket
-    expect(dbB1.prepare("SELECT count(*) as c FROM tickets WHERE id = 't_isolated_b2'").get().c).toBe(0);
-    expect(dbB2.prepare("SELECT count(*) as c FROM tickets WHERE id = 't_isolated_b1'").get().c).toBe(0);
+    expect(
+      dbB1.prepare("SELECT count(*) as c FROM tickets WHERE id = 't_isolated_b2'").get().c
+    ).toBe(0);
+    expect(
+      dbB2.prepare("SELECT count(*) as c FROM tickets WHERE id = 't_isolated_b1'").get().c
+    ).toBe(0);
 
     // 3. Heal Partition: Anti-entropy synchronizes state across partition boundary
     const opsFromB1 = dbB1.prepare('SELECT * FROM op_log').all();

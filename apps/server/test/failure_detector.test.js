@@ -2,11 +2,10 @@
  * Unit & Integration Tests: Failure Detector & Membership (Stage 3)
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
-import { PEER_STATUS } from '@festpass/shared';
-import { FailureDetector } from '../src/services/failureDetector';
-import { runMigrations } from '../src/db/migrator';
+const Database = require('better-sqlite3');
+const { PEER_STATUS } = require('@festpass/shared');
+const { FailureDetector } = require('../src/services/failureDetector');
+const { runMigrations } = require('../src/db/migrator');
 
 describe('Membership & Failure Detector', () => {
   let db;
@@ -32,10 +31,12 @@ describe('Membership & Failure Detector', () => {
 
   it('records a peer as ALIVE and persists to peers table', () => {
     // Populate peer in DB
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO peers (node_id, url, role, last_seen, status)
       VALUES ('B2', 'http://localhost:4002', 'booth', datetime('now'), 'alive')
-    `).run();
+    `
+    ).run();
 
     detector.lastSeenMap.set('B2', Date.now());
 
@@ -45,10 +46,12 @@ describe('Membership & Failure Detector', () => {
 
   it('transitions ALIVE -> SUSPECT -> DEAD when heartbeats cease', () => {
     const now = Date.now();
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO peers (node_id, url, role, last_seen, status)
       VALUES ('B2', 'http://localhost:4002', 'booth', datetime('now'), 'alive')
-    `).run();
+    `
+    ).run();
 
     // 1. Initial state: alive
     detector.lastSeenMap.set('B2', now);
@@ -70,10 +73,12 @@ describe('Membership & Failure Detector', () => {
   });
 
   it('automatically recovers from DEAD to ALIVE when peer returns', () => {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO peers (node_id, url, role, last_seen, status)
       VALUES ('B2', 'http://localhost:4002', 'booth', datetime('now'), 'dead')
-    `).run();
+    `
+    ).run();
 
     let recovered = false;
     detector.onStatusChange((nodeId, oldStatus, newStatus) => {
@@ -91,10 +96,12 @@ describe('Membership & Failure Detector', () => {
   });
 
   it('merges remote peer states when receiving gossip', async () => {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO peers (node_id, url, role, last_seen, status)
       VALUES ('B2', 'http://localhost:4002', 'booth', datetime('now'), 'alive')
-    `).run();
+    `
+    ).run();
 
     const gossipPayload = {
       originNodeId: 'B2',

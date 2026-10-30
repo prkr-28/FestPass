@@ -2,11 +2,10 @@
  * Unit Tests: CRDT State-Machine Replication Engine (Stage 3)
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
-import { OP_TYPES, TICKET_STATUS } from '@festpass/shared';
-import { applyOp, applyBatch } from '../src/services/crdtEngine';
-import { runMigrations } from '../src/db/migrator';
+const Database = require('better-sqlite3');
+const { OP_TYPES, TICKET_STATUS } = require('@festpass/shared');
+const { applyOp, applyBatch } = require('../src/services/crdtEngine');
+const { runMigrations } = require('../src/db/migrator');
 
 describe('CRDT Apply Engine', () => {
   let db;
@@ -15,11 +14,13 @@ describe('CRDT Apply Engine', () => {
     db = new Database(':memory:');
     runMigrations(db);
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO events (id, name, venue, starts_at, capacity, price, status, created_at)
       VALUES ('evt_test', 'Test Fest', 'Test Arena', '2026-11-15T18:00:00Z', 300, 25, 'on_sale', datetime('now'))
       ON CONFLICT(id) DO NOTHING
-    `).run();
+    `
+    ).run();
   });
 
   afterEach(() => {
@@ -203,10 +204,12 @@ describe('CRDT Apply Engine', () => {
 
   it('CHECKIN_RECORDED: executes Stage 4 extension hook and marks ticket used', () => {
     // 1. Issue a valid ticket
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO tickets (id, event_id, holder_name, holder_email, holder_phone, issued_by_node, issued_at_hlc, status, token, created_at)
       VALUES ('t_400', 'evt_test', 'Dave', 'dave@campus.edu', '+15554444444', 'B1', '1793370000000:0:B1', 'valid', 'FP1.t_400...', datetime('now'))
-    `).run();
+    `
+    ).run();
 
     // 2. Checkin operation arrives from Gate G1
     const checkinOp = {

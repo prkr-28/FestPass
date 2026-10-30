@@ -45,10 +45,12 @@ function applyOp(db, op) {
   }
 
   // 3. Record op in op_log table
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO op_log (op_id, origin_node, hlc, type, payload_json, applied_at)
     VALUES (?, ?, ?, ?, ?, datetime('now'))
-  `).run(
+  `
+  ).run(
     op.op_id,
     op.origin_node,
     op.hlc,
@@ -79,7 +81,10 @@ function applyOp(db, op) {
       break;
 
     default:
-      logger.warn({ type: op.type, opId: op.op_id }, 'Unknown operation type encountered during apply');
+      logger.warn(
+        { type: op.type, opId: op.op_id },
+        'Unknown operation type encountered during apply'
+      );
   }
 
   return { applied: true };
@@ -129,10 +134,12 @@ function applyEventUpsert(db, op, payload) {
 
   if (!existing) {
     // New event: insert into events table
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO events (id, name, venue, starts_at, capacity, price, status, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, coalesce(?, datetime('now')))
-    `).run(
+    `
+    ).run(
       event.id,
       event.name,
       event.venue,
@@ -159,7 +166,9 @@ function applyEventUpsert(db, op, payload) {
   }
 
   // Event exists: find the highest HLC of any previously applied EVENT_UPSERT for this event
-  const lastOp = db.prepare(`
+  const lastOp = db
+    .prepare(
+      `
     SELECT hlc FROM op_log
     WHERE type = 'EVENT_UPSERT'
       AND op_id != ?
@@ -168,12 +177,15 @@ function applyEventUpsert(db, op, payload) {
         OR json_extract(payload_json, '$.eventId') = ?
       )
     ORDER BY hlc DESC LIMIT 1
-  `).get(op.op_id, event.id, event.id);
+  `
+    )
+    .get(op.op_id, event.id, event.id);
 
   const shouldUpdate = !lastOp || HLC.compare(op.hlc, lastOp.hlc) >= 0;
 
   if (shouldUpdate) {
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE events SET
         name = ?,
         venue = ?,
@@ -182,7 +194,8 @@ function applyEventUpsert(db, op, payload) {
         price = ?,
         status = ?
       WHERE id = ?
-    `).run(
+    `
+    ).run(
       event.name,
       event.venue,
       event.starts_at,
@@ -224,13 +237,16 @@ function applyTicketIssued(db, op, payload) {
   }
 
   // Ensure event exists to satisfy foreign key constraint during out-of-order replication
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO events (id, name, venue, starts_at, capacity, price, status, created_at)
     VALUES (?, 'Pending Replication Event', 'TBD', datetime('now'), 0, 0, 'draft', datetime('now'))
     ON CONFLICT(id) DO NOTHING
-  `).run(eventId);
+  `
+  ).run(eventId);
 
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO tickets (id, event_id, holder_name, holder_email, holder_phone, issued_by_node, issued_at_hlc, status, token, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'valid', ?, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
@@ -239,7 +255,8 @@ function applyTicketIssued(db, op, payload) {
       holder_name = coalesce(tickets.holder_name, excluded.holder_name),
       holder_email = coalesce(tickets.holder_email, excluded.holder_email),
       holder_phone = coalesce(tickets.holder_phone, excluded.holder_phone)
-  `).run(
+  `
+  ).run(
     ticketId,
     eventId,
     payload.holderName || payload.holder_name || '',
@@ -265,18 +282,22 @@ function applyTicketRevoked(db, op, payload) {
     db.prepare('UPDATE tickets SET status = ? WHERE id = ?').run(TICKET_STATUS.REVOKED, ticketId);
   } else {
     const eventId = payload.eventId || 'unknown_event';
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO events (id, name, venue, starts_at, capacity, price, status, created_at)
       VALUES (?, 'Pending Replication Event', 'TBD', datetime('now'), 0, 0, 'draft', datetime('now'))
       ON CONFLICT(id) DO NOTHING
-    `).run(eventId);
+    `
+    ).run(eventId);
 
     // Out-of-order delivery: insert stub marked revoked so when TICKET_ISSUED arrives, it remains revoked
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO tickets (id, event_id, holder_name, holder_email, holder_phone, issued_by_node, issued_at_hlc, status, token, created_at)
       VALUES (?, ?, 'Revoked Ticket', '', '', ?, ?, ?, '', datetime('now'))
       ON CONFLICT(id) DO UPDATE SET status = ?
-    `).run(
+    `
+    ).run(
       ticketId,
       eventId,
       op.origin_node,
@@ -310,11 +331,13 @@ function applyCheckinRecorded(db, op, payload) {
 
   const existing = db.prepare('SELECT id FROM checkins WHERE id = ?').get(checkinId);
   if (!existing) {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO checkins (id, ticket_id, gate_node_id, hlc, mode, result, resolved, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
       ON CONFLICT(id) DO NOTHING
-    `).run(
+    `
+    ).run(
       checkinId,
       ticketId,
       payload.gateNodeId || payload.gate_node_id || op.origin_node,
@@ -325,7 +348,9 @@ function applyCheckinRecorded(db, op, payload) {
     );
 
     if (payload.result === 'accepted') {
-      db.prepare("UPDATE tickets SET status = 'used' WHERE id = ? AND status != 'revoked'").run(ticketId);
+      db.prepare("UPDATE tickets SET status = 'used' WHERE id = ? AND status != 'revoked'").run(
+        ticketId
+      );
     }
   }
 }
@@ -336,11 +361,13 @@ function applyCheckinRecorded(db, op, payload) {
 function applyConflictResolved(db, _op, payload) {
   if (!payload.id || !payload.ticketId) return;
 
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO conflicts (id, ticket_id, winner_checkin_id, loser_checkin_id, detected_at, details_json)
     VALUES (?, ?, ?, ?, datetime('now'), ?)
     ON CONFLICT(id) DO NOTHING
-  `).run(
+  `
+  ).run(
     payload.id,
     payload.ticketId,
     payload.winnerCheckinId || '',

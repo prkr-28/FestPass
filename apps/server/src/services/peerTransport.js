@@ -28,7 +28,14 @@ const { partitions, delays, dropRates } = global.__festpass_chaos;
 /**
  * Configure chaos simulation rules
  */
-function applyChaos({ action, targetNodeId, delayMs = 0, dropRate = null, percentage = null, enabled = true }) {
+function applyChaos({
+  action,
+  targetNodeId,
+  delayMs = 0,
+  dropRate = null,
+  percentage = null,
+  enabled = true,
+}) {
   if (action === 'reset') {
     partitions.clear();
     delays.clear();
@@ -154,7 +161,11 @@ function resolvePeerUrl(targetNodeId) {
 /**
  * Send an HTTP request to a peer node, honoring chaos simulation hooks
  */
-async function sendRequest(targetNodeId, endpointPath, { method = 'POST', body = null, headers = {}, timeoutMs = 3000 } = {}) {
+async function sendRequest(
+  targetNodeId,
+  endpointPath,
+  { method = 'POST', body = null, headers = {}, timeoutMs = 3000 } = {}
+) {
   // 1. Verify partition rule
   if (isPartitioned(targetNodeId)) {
     throw new AppError(
@@ -218,7 +229,11 @@ async function sendRequest(targetNodeId, endpointPath, { method = 'POST', body =
 
     if (!response.ok) {
       const errorMsg = data?.error?.message || data?.message || `HTTP ${response.status}`;
-      const err = new AppError(errorMsg, response.status, data?.error?.code || ERROR_CODES.PEER_UNREACHABLE);
+      const err = new AppError(
+        errorMsg,
+        response.status,
+        data?.error?.code || ERROR_CODES.PEER_UNREACHABLE
+      );
       err.response = data;
       throw err;
     }
