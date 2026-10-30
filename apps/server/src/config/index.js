@@ -9,6 +9,9 @@ const { NODE_ROLES } = require('@festpass/shared');
 
 // Load .env if present
 dotenv.config();
+if (!process.env.ED25519_PRIVATE_KEY && !process.env.ED25519_PUBLIC_KEY) {
+  dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+}
 
 // Helper to deduce node index from common node ID names (e.g. B1 -> 1, G2 -> 5)
 function defaultNodeIndex(nodeId) {
