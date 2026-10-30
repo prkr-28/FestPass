@@ -11,6 +11,7 @@ const config = require('../config');
 const { getDb } = require('../db');
 const idService = require('./idService');
 const hlcService = require('./hlcService');
+const replicationService = require('./replicationService');
 const { AppError } = require('../middleware/errorHandler');
 
 /**
@@ -143,15 +144,27 @@ function upsertEvent(eventData, existingId = null) {
       isUpdate,
     });
 
+    const opRecord = {
+      op_id: opId,
+      origin_node: config.nodeId,
+      hlc,
+      type: OP_TYPES.EVENT_UPSERT,
+      payload_json: payload,
+    };
+
     db.prepare(
       `INSERT INTO op_log (op_id, origin_node, hlc, type, payload_json, applied_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`
     ).run(opId, config.nodeId, hlc, OP_TYPES.EVENT_UPSERT, payload);
 
-    return { event: eventRecord, quotas };
+    return { event: eventRecord, quotas, opRecord };
   })();
 
-  return result;
+  if (result.opRecord) {
+    replicationService.notifyNewOp(result.opRecord);
+  }
+
+  return { event: result.event, quotas: result.quotas };
 }
 
 /**
