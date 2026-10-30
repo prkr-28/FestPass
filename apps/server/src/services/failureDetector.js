@@ -259,6 +259,21 @@ class FailureDetector {
         }
       }
     }
+
+    try {
+      const { broadcastClusterUpdate } = require('../socket');
+      const activePeers = allPeers.filter(
+        (p) => p.status === PEER_STATUS.ALIVE || p.status === PEER_STATUS.HEALTHY
+      ).length;
+      broadcastClusterUpdate({
+        nodeId: config.nodeId,
+        hlc: hlcService.now().toString(),
+        activePeers,
+        status: 'healthy',
+      });
+    } catch (_e) {
+      // Ignore if socket not initialized
+    }
   }
 
   /**
