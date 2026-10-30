@@ -24,12 +24,21 @@ const NODES = [
 
 function resolveDbPath(nodeId) {
   const rootData = path.resolve(__dirname, '..', 'data', `${nodeId}.db`);
-  if (fs.existsSync(rootData)) return rootData;
-
   const serverData = path.resolve(__dirname, '..', 'apps', 'server', 'data', `${nodeId}.db`);
-  if (fs.existsSync(serverData)) return serverData;
 
-  return rootData; // fallback
+  const rootExists = fs.existsSync(rootData);
+  const serverExists = fs.existsSync(serverData);
+
+  if (rootExists && serverExists) {
+    const rootMtime = fs.statSync(rootData).mtimeMs;
+    const serverMtime = fs.statSync(serverData).mtimeMs;
+    return serverMtime >= rootMtime ? serverData : rootData;
+  }
+
+  if (serverExists) return serverData;
+  if (rootExists) return rootData;
+
+  return serverData;
 }
 
 function computeTableChecksum(db, tableName, orderCol = 'id') {
