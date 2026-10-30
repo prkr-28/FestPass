@@ -8,10 +8,10 @@
 const logger = require('../logger');
 const { getDb } = require('../db');
 
-async function handleGossip({ originNodeId, peers, hlc }) {
-  // TODO(stage-3): Merge peer membership tables and update last_seen
-  logger.debug({ originNodeId, peerCount: peers.length, hlc }, 'TODO(stage-3): Gossip received');
-  return { success: true };
+const { failureDetector } = require('./failureDetector');
+
+async function handleGossip(payload) {
+  return failureDetector.handleGossip(payload);
 }
 
 async function handleSync({ fromHlc, originNodeId, limit }) {
