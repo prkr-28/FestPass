@@ -299,7 +299,7 @@ All tables are created in `apps/server/src/db/migrations/001_initial_schema.sql`
 | **Stage 1** | Foundation & Core Primitives | Shared package, DB schema, config, HLC, Snowflake, Ed25519, contracts | Member 1 | **DONE** |
 | **Stage 2** | Auth, Events & Booth Sales   | JWT auth, events CRUD, booth ticket sales, quota oversell prevention  | Member 2 | **DONE** |
 | **Stage 3** | Replication & Membership     | Peer gossip, heartbeat failure detector, anti-entropy log sync        | Member 3 | **DONE** |
-| **Stage 4** | Gate Validation & Quorum     | Offline validation, quorum checkin, concurrent double-scan resolution | Member 4 | PENDING  |
+| **Stage 4** | Gate Validation & Quorum     | Offline validation, quorum checkin, concurrent double-scan resolution | Member 4 | **DONE** |
 | **Stage 5** | Admin & Booth Frontend       | React admin dashboard, booth sales UI, ticket view with failover      | Member 5 | PENDING  |
 | **Stage 6** | Scanner UI, Chaos & Testing  | Gate QR scanner, live cluster dashboard, chaos tools, load tests      | Member 6 | PENDING  |
 
@@ -700,5 +700,68 @@ peerTransport.setRule({
 });
 
 // Restore normal connectivity:
-peerTransport.reset();
+peerTransport.resetChaos();
 ```
+
+---
+
+## 17. Stage 4 Completion Report
+
+### 17.1 Built in Stage 4
+
+1. **Gate Validation Engine (`apps/server/src/services/gateService.js`)**:
+   - `POST /api/gate/scan` and `POST /gate/scan`: Validates Ed25519 digital signature offline, checks local ticket revocation status, executes distributed quorum claim or offline validation, atomically records check-in and advances HLC.
+   - Comprehensive status responses: `accepted`, `rejected_duplicate` (with prior timestamp and gate ID), `rejected_invalid` (tampered or forged tokens), and `revoked` (refunded/cancelled tickets).
+   - `POST /gate/scan-offline-batch`: Replays accumulated offline handheld scans sorted causally by HLC, auto-resolving conflicts.
+   - `GET /gate/checkins`: Paginated and filterable check-in history.
+   - `GET /gate/stats`: Gate entrances, blocked duplicates, invalid attempts, and per-event summaries.
+   - `GET /tickets/:id/status`: Ticket validation status, `fraudAlert` flag, and check-in history.
+
+2. **Distributed Gate Quorum Consensus**:
+   - Gate nodes (`G1`, `G2`, `G3`) act as distributed acceptors.
+   - Persisted claim grants in SQLite `ticket_claims` table ensuring durability across node crashes.
+   - Majority consensus ($2/3$) required before accepting online scans; concurrent claims ordered deterministically by lowest $(HLC, nodeId)$.
+   - Randomized backoff retry on split votes.
+
+3. **Offline Resilience & CRDT Conflict Resolution (`crdtEngine.js`)**:
+   - Under network partition, gate falls back to `OFFLINE_POLICY` (`allow_flagged`).
+   - When partitions heal and replicas synchronize via anti-entropy sync, `applyCheckinRecorded()` executes deterministic conflict resolution:
+     - Earliest HLC wins entry (`result = 'accepted'`).
+     - Later check-in is updated to `result = 'rejected_duplicate'` with `resolved = 1`.
+     - Conflict record logged to `conflicts` table.
+     - `fraud_alert = 1` set on ticket.
+     - Socket.IO `conflict:detected` emitted to all connected dashboards.
+
+4. **Demonstration Script & Tests**:
+   - `scripts/demo_doublescan.js` (`npm run demo:doublescan`): Fires concurrent scans at two gates simultaneously, demonstrating consensus verdict.
+   - 12 comprehensive unit and integration tests in `apps/server/test/gate_validation.test.js`. Total test suite: 16 test files, 89 passing tests.
+
+---
+
+## 18. Handoff Notes for Stages 5 and 6 (Frontend & Tools)
+
+### 18.1 API Response Shapes Needed for Frontend
+
+- **Scan Response (`POST /api/gate/scan`)**:
+  ```json
+  {
+    "success": true,
+    "checkinId": "242166162878631936",
+    "ticketId": "242166162828300288",
+    "eventId": "242166162600000000",
+    "result": "accepted", // 'accepted' | 'rejected_duplicate' | 'rejected_invalid' | 'revoked'
+    "mode": "online", // 'online' | 'offline'
+    "hlc": "1761820000000:0:G1",
+    "latencyMs": 14
+  }
+  ```
+- **Socket.IO Events to Listen For**:
+  - `ticket:issued`: `{ ticketId, eventId, holderName, holderEmail, issuedByNode, token, timestamp }`
+  - `checkin:result`: `{ checkinId, ticketId, eventId, gateNodeId, result, mode, hlc, timestamp }`
+  - `conflict:detected`: `{ id, ticketId, winnerCheckinId, loserCheckinId, details, detectedAt }`
+  - `cluster:update`: `{ nodeId, role, peers, timestamp }`
+
+### 18.2 Node Endpoints for Failover Client
+
+- Booth Nodes: `http://localhost:4001`, `http://localhost:4002`, `http://localhost:4003`
+- Gate Nodes: `http://localhost:4004`, `http://localhost:4005`, `http://localhost:4006`

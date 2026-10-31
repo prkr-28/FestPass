@@ -13,6 +13,7 @@ const {
   gossipSchema,
   syncRequestSchema,
   claimQuotaSchema,
+  claimTicketSchema,
   borrowQuotaSchema,
   chaosSchema,
   replicateSchema,
@@ -22,6 +23,7 @@ const replicationService = require('../services/replicationService');
 const peerTransport = require('../services/peerTransport');
 const hlcService = require('../services/hlcService');
 const ticketService = require('../services/ticketService');
+const gateService = require('../services/gateService');
 
 const router = express.Router();
 
@@ -103,9 +105,15 @@ router.post('/quota/borrow', async (req, res, next) => {
   }
 });
 
-// POST /internal/claim - Quota claim (Contract 8.3 specification)
+// POST /internal/claim - Ticket claim (Stage 4) or Quota claim (Contract 8.3 specification)
 router.post('/claim', async (req, res, next) => {
   try {
+    if (req.body.claimType === 'ticket' || req.body.ticketId) {
+      const validated = claimTicketSchema.parse(req.body);
+      const result = gateService.handleTicketClaim(validated);
+      return res.status(200).json(result);
+    }
+
     const validated = claimQuotaSchema.parse(req.body);
 
     if (validated.targetNodeId === config.nodeId) {

@@ -141,6 +141,13 @@ const claimQuotaSchema = z.object({
   amount: z.number().int().positive('Claim amount must be positive'),
 });
 
+const claimTicketSchema = z.object({
+  ticketId: z.string().trim().min(1, 'ticketId is required'),
+  claimantNodeId: z.string().trim().min(1, 'claimantNodeId is required'),
+  hlc: z.string().trim().min(1, 'hlc is required'),
+  attempt: z.number().int().optional(),
+});
+
 const borrowQuotaSchema = z.object({
   eventId: z.string().trim().min(1, 'eventId is required'),
   amount: z.number().int().positive('Borrow amount must be positive'),
@@ -175,6 +182,7 @@ module.exports = {
   syncRequestSchema,
   opLogEntrySchema,
   claimQuotaSchema,
+  claimTicketSchema,
   borrowQuotaSchema,
   chaosSchema,
   replicateSchema,

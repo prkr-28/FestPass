@@ -94,6 +94,19 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
+// GET /tickets/:id/status - Get detailed status, fraud alert, and checkin history
+router.get('/:id/status', async (req, res, next) => {
+  try {
+    const statusInfo = await ticketService.getTicketStatus(req.params.id);
+    if (!statusInfo) {
+      throw new AppError(`Ticket with id '${req.params.id}' not found`, 404, ERROR_CODES.NOT_FOUND);
+    }
+    res.status(200).json({ success: true, ...statusInfo });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /tickets - Query tickets by holder email, phone, or eventId
 router.get(
   '/',

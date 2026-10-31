@@ -723,10 +723,41 @@ async function borrowQuotaFromPeer({ eventId, targetNodeId, amount }) {
   };
 }
 
+/**
+ * Get ticket status with checkins and fraud alert flag
+ */
+function getTicketStatus(ticketId) {
+  const db = getDb();
+  const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
+  if (!ticket) return null;
+
+  const checkins = db
+    .prepare('SELECT * FROM checkins WHERE ticket_id = ? ORDER BY created_at DESC')
+    .all(ticketId);
+
+  const event = db.prepare('SELECT * FROM events WHERE id = ?').get(ticket.event_id);
+
+  return {
+    ticketId: ticket.id,
+    eventId: ticket.event_id,
+    eventName: event ? event.name : 'Unknown Event',
+    holderName: ticket.holder_name,
+    holderEmail: ticket.holder_email,
+    holderPhone: ticket.holder_phone,
+    status: ticket.status,
+    fraudAlert: Boolean(ticket.fraud_alert),
+    issuedByNode: ticket.issued_by_node,
+    token: ticket.token,
+    createdAt: ticket.created_at,
+    checkins,
+  };
+}
+
 module.exports = {
   issueTicket,
   issueBulkTickets,
   getTicketById,
+  getTicketStatus,
   queryTickets,
   revokeTicket,
   getSalesStats,
