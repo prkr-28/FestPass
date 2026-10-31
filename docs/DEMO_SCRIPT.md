@@ -17,34 +17,39 @@ This step-by-step presentation script is designed for final project evaluation, 
 
 ## Demo Schedule Overview
 
-| Minute | Phase | Focus Area | Technical Concept Demonstrated |
-| :--- | :--- | :--- | :--- |
-| **0:00 - 1:00** | Introduction & Architecture | 6-Node topology, storage isolation | Heterogeneous cluster, shared-nothing SQLite |
-| **1:00 - 2:00** | Ticket Issuance & Quotas | Booth sales UI & atomic partitioning | Avoid overselling without inter-node locks |
-| **2:00 - 3:30** | Double-Spend Prevention | Concurrent double scan at Gates G1 & G2 | Distributed Quorum Consensus (Majority 2/3) |
-| **3:30 - 4:45** | Network Partition & Conflict | Offline scans & Anti-Entropy Sync | CRDT convergence, deterministic HLC ordering |
-| **4:45 - 6:00** | Chaos Injection & Failover | Node failure, peer gossip, client failover | Heartbeat failure detection, resilient client |
-| **6:00 - 7:00** | Performance & Viva Defense | High-throughput benchmark & Q&A | Autocannon load metrics, sub-2ms offline scans |
+| Minute          | Phase                        | Focus Area                                 | Technical Concept Demonstrated                 |
+| :-------------- | :--------------------------- | :----------------------------------------- | :--------------------------------------------- |
+| **0:00 - 1:00** | Introduction & Architecture  | 6-Node topology, storage isolation         | Heterogeneous cluster, shared-nothing SQLite   |
+| **1:00 - 2:00** | Ticket Issuance & Quotas     | Booth sales UI & atomic partitioning       | Avoid overselling without inter-node locks     |
+| **2:00 - 3:30** | Double-Spend Prevention      | Concurrent double scan at Gates G1 & G2    | Distributed Quorum Consensus (Majority 2/3)    |
+| **3:30 - 4:45** | Network Partition & Conflict | Offline scans & Anti-Entropy Sync          | CRDT convergence, deterministic HLC ordering   |
+| **4:45 - 6:00** | Chaos Injection & Failover   | Node failure, peer gossip, client failover | Heartbeat failure detection, resilient client  |
+| **6:00 - 7:00** | Performance & Viva Defense   | High-throughput benchmark & Q&A            | Autocannon load metrics, sub-2ms offline scans |
 
 ---
 
 ## Step 1: Cluster Startup & Topology (0:00 – 1:00)
 
 ### Action:
+
 In **Terminal 1**, start the 6 autonomous server nodes:
+
 ```bash
 npm run cluster
 ```
 
 In **Terminal 2**, start the frontend application:
+
 ```bash
 npm run dev -w apps/web
 ```
 
 ### Explaining to Faculty:
-> *"FestPass runs 6 autonomous Node.js server processes from the same codebase, differentiated solely by environment variables. Nodes `B1`, `B2`, and `B3` are Booth nodes (ports 4001–4003) responsible for ticket issuing and quota management. Nodes `G1`, `G2`, and `G3` are Gate nodes (ports 4004–4006) responsible for entry validation. Each node maintains its own isolated SQLite file in `data/<NODE_ID>.db`, mimicking physically separate machines on campus."*
+
+> _"FestPass runs 6 autonomous Node.js server processes from the same codebase, differentiated solely by environment variables. Nodes `B1`, `B2`, and `B3` are Booth nodes (ports 4001–4003) responsible for ticket issuing and quota management. Nodes `G1`, `G2`, and `G3` are Gate nodes (ports 4004–4006) responsible for entry validation. Each node maintains its own isolated SQLite file in `data/<NODE_ID>.db`, mimicking physically separate machines on campus."_
 
 ### Verify in Browser:
+
 - Navigate to `http://localhost:5173/login`.
 - Notice the **Viva Demo Quick-Login Presets**: Admin, Booth Staff (B1), Gate Staff (G1).
 - Click **Admin Preset** (`admin@campus.edu`) and click **Sign In**.
@@ -54,6 +59,7 @@ npm run dev -w apps/web
 ## Step 2: Quota Partitioning & Ticket Issuance (1:00 – 2:00)
 
 ### Action:
+
 1. In the Web UI, go to **Events** (`/admin/events`).
 2. Click **+ Create Event**:
    - Name: `Campus Symphony 2026`
@@ -64,7 +70,8 @@ npm run dev -w apps/web
 3. Click **Create & Partition Quota**.
 
 ### Explaining to Faculty:
-> *"When capacity 300 was created, FestPass automatically partitioned the total capacity across booth nodes: B1 receives 100, B2 receives 100, B3 receives 100. Each booth can now sell up to its allocated quota atomically in local transactions without requiring distributed locks or synchronous inter-booth coordination. This achieves zero overselling with maximum availability."*
+
+> _"When capacity 300 was created, FestPass automatically partitioned the total capacity across booth nodes: B1 receives 100, B2 receives 100, B3 receives 100. Each booth can now sell up to its allocated quota atomically in local transactions without requiring distributed locks or synchronous inter-booth coordination. This achieves zero overselling with maximum availability."_
 
 4. Switch to **Booth Sales** (`/booth`):
    - Select `Campus Symphony 2026`.
@@ -78,12 +85,15 @@ npm run dev -w apps/web
 ## Step 3: Concurrent Double-Scan Prevention (2:00 – 3:30)
 
 ### Action:
+
 In **Terminal 3**, execute the live concurrent double-scan proof script:
+
 ```bash
 npm run demo:doublescan
 ```
 
 ### Expected Terminal Output:
+
 ```
 ================================================================================
  FESTPASS CONCURRENT DOUBLE-SCAN DEMONSTRATION
@@ -110,19 +120,23 @@ npm run demo:doublescan
 ```
 
 ### Explaining to Faculty:
-> *"Even though both gate nodes received the request at the exact same physical millisecond, the Distributed Quorum Consensus protocol required majority consensus (2 out of 3 gates). Gate G1 acquired the ticket claim grant with an earlier Hybrid Logical Clock (HLC). When Gate G2 requested quorum, peer gates detected the active grant and rejected Gate G2's claim as a duplicate, completely preventing fraudulent double-entry."*
+
+> _"Even though both gate nodes received the request at the exact same physical millisecond, the Distributed Quorum Consensus protocol required majority consensus (2 out of 3 gates). Gate G1 acquired the ticket claim grant with an earlier Hybrid Logical Clock (HLC). When Gate G2 requested quorum, peer gates detected the active grant and rejected Gate G2's claim as a duplicate, completely preventing fraudulent double-entry."_
 
 ---
 
 ## Step 4: Offline Validation & Network Partition Healing (3:30 – 4:45)
 
 ### Action:
+
 In **Terminal 3**, run the network partition and conflict resolution demonstration:
+
 ```bash
 npm run demo:partition
 ```
 
 ### Expected Terminal Output:
+
 ```
 ================================================================================
  FESTPASS NETWORK PARTITION & CONFLICT RESOLUTION
@@ -159,13 +173,15 @@ npm run demo:partition
 ```
 
 ### Explaining to Faculty:
-> *"During temporary campus network blackouts, gates operate under the AP (High Availability) mode of the CAP theorem. Using Ed25519 asymmetric cryptography, gate staff verify tickets 100% offline. If fraudulent clones are scanned at two disconnected gates, both accept tentatively. Once the network reconnects, the State-Machine CRDT engine orders the events using Hybrid Logical Clocks: the earlier logical timestamp wins entry, the loser is retroactively flagged as duplicate, a fraud alert is marked on the ticket, and the incident is broadcast in real time to the admin console."*
+
+> _"During temporary campus network blackouts, gates operate under the AP (High Availability) mode of the CAP theorem. Using Ed25519 asymmetric cryptography, gate staff verify tickets 100% offline. If fraudulent clones are scanned at two disconnected gates, both accept tentatively. Once the network reconnects, the State-Machine CRDT engine orders the events using Hybrid Logical Clocks: the earlier logical timestamp wins entry, the loser is retroactively flagged as duplicate, a fraud alert is marked on the ticket, and the incident is broadcast in real time to the admin console."_
 
 ---
 
 ## Step 5: Live Cluster Dashboard, Chaos Injection & Failover (4:45 – 6:00)
 
 ### Action:
+
 1. In the browser, navigate to the **Cluster Dashboard** (`/admin/cluster`).
 2. Show the real-time topology of all 6 nodes:
    - Green status indicators for `B1`, `B2`, `B3`, `G1`, `G2`, `G3`.
@@ -181,21 +197,26 @@ npm run demo:partition
 ## Step 6: Concurrency Invariant & Throughput Proofs (6:00 – 7:00)
 
 ### Action:
+
 In **Terminal 3**, run the 100-trial mathematical invariant proof:
+
 ```bash
 npm run test:scenario
 ```
 
 ### Explaining Output:
+
 - 100 trials of 3 simultaneous gate scans (300 scans total).
 - Passed: 100/100 (100.0%).
 - Failed: 0.
 - Average quorum latency: ~15ms.
 
 In **Terminal 3**, display the latency comparison benchmark:
+
 ```bash
 npm run benchmark
 ```
+
 - Offline local signature scan: **0.82 ms** (5.3x faster).
 - Online quorum consensus scan: **4.37 ms**.
 

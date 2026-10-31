@@ -24,7 +24,8 @@ export default function AppLayout() {
               <div className="flex-1">
                 <p className="text-xs font-semibold text-slate-100">Live Ticket Issued</p>
                 <p className="text-[11px] text-slate-300 mt-0.5">
-                  <span className="font-medium text-cyan-300">{data.holderName || 'Attendee'}</span> issued by Node{' '}
+                  <span className="font-medium text-cyan-300">{data.holderName || 'Attendee'}</span>{' '}
+                  issued by Node{' '}
                   <span className="font-mono text-cyan-300">{data.issuedByNode || 'B1'}</span>
                 </p>
               </div>
@@ -53,14 +54,19 @@ export default function AppLayout() {
                   isAccepted ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
                 } flex items-center justify-center shrink-0`}
               >
-                {isAccepted ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                {isAccepted ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <XCircle className="h-4 w-4" />
+                )}
               </div>
               <div className="flex-1">
                 <p className="text-xs font-semibold text-slate-100">
                   {isAccepted ? 'Gate Scan: Accepted' : 'Gate Scan: Duplicate Rejected'}
                 </p>
                 <p className="text-[11px] text-slate-300 mt-0.5">
-                  Gate <span className="font-mono text-cyan-300">{data.gateNodeId}</span> (Mode: {data.mode})
+                  Gate <span className="font-mono text-cyan-300">{data.gateNodeId}</span> (Mode:{' '}
+                  {data.mode})
                 </p>
               </div>
             </div>
@@ -84,10 +90,13 @@ export default function AppLayout() {
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <p className="text-xs font-bold text-amber-300">Offline Checkin Conflict Resolved</p>
+                <p className="text-xs font-bold text-amber-300">
+                  Offline Checkin Conflict Resolved
+                </p>
                 <p className="text-[11px] text-slate-300 mt-1">
-                  Ticket <span className="font-mono text-slate-200">{data.ticketId?.slice(0, 14)}...</span> scanned
-                  concurrently. Winner resolved by HLC.
+                  Ticket{' '}
+                  <span className="font-mono text-slate-200">{data.ticketId?.slice(0, 14)}...</span>{' '}
+                  scanned concurrently. Winner resolved by HLC.
                 </p>
               </div>
             </div>

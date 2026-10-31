@@ -18,8 +18,8 @@ export default function ProtectedRoute({ children, allowedRoles }) {
         </div>
         <h2 className="text-xl font-bold text-slate-100">Access Restricted</h2>
         <p className="mt-2 text-sm text-slate-400 max-w-sm">
-          Your role (<span className="font-mono text-cyan-300 uppercase">{user?.role}</span>) does not have
-          permission to access this route. Requires one of: [{allowedRoles.join(', ')}].
+          Your role (<span className="font-mono text-cyan-300 uppercase">{user?.role}</span>) does
+          not have permission to access this route. Requires one of: [{allowedRoles.join(', ')}].
         </p>
       </div>
     );

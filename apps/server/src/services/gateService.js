@@ -105,6 +105,7 @@ function handleTicketClaim({ ticketId, claimantNodeId, hlc }) {
  * Executes the distributed quorum claim protocol across gate nodes
  */
 async function acquireGateQuorumClaim(ticketId) {
+  const db = getDb();
   const peers = GATE_NODES.filter((nodeId) => nodeId !== config.nodeId);
   const majorityNeeded = Math.floor(GATE_NODES.length / 2) + 1; // 2 out of 3
 
@@ -122,7 +123,6 @@ async function acquireGateQuorumClaim(ticketId) {
       };
     }
 
-    let grants = localGrant.granted ? 1 : 0;
     let peerUnreachableCount = 0;
     let duplicateDetected = null;
 
@@ -142,17 +142,18 @@ async function acquireGateQuorumClaim(ticketId) {
           { timeoutMs: 1200 }
         );
 
-        if (res.data?.granted) {
+        const claimData = res?.data || res || {};
+        if (claimData.granted) {
           return { granted: true, peerId };
-        } else if (res.data?.reason === 'already_used') {
+        } else if (claimData.reason === 'already_used') {
           return {
             granted: false,
             alreadyUsed: true,
-            firstCheckedInAt: res.data.firstCheckedInAt,
-            gateNodeId: res.data.gateNodeId,
+            firstCheckedInAt: claimData.firstCheckedInAt,
+            gateNodeId: claimData.gateNodeId,
           };
         }
-        return { granted: false, reason: res.data?.reason };
+        return { granted: false, reason: claimData.reason };
       } catch (err) {
         return { granted: false, unreachable: true, err: err.message };
       }
@@ -160,9 +161,17 @@ async function acquireGateQuorumClaim(ticketId) {
 
     const results = await Promise.all(claimPromises);
 
+    // Re-verify that local node still holds its own grant
+    const currentLocalClaim = db
+      .prepare('SELECT * FROM ticket_claims WHERE ticket_id = ?')
+      .get(ticketId);
+    const stillHoldsLocal =
+      currentLocalClaim && currentLocalClaim.claimant_node_id === config.nodeId;
+    let totalGrants = stillHoldsLocal ? 1 : 0;
+
     for (const r of results) {
       if (r.granted) {
-        grants++;
+        totalGrants++;
       } else if (r.alreadyUsed) {
         duplicateDetected = r;
       } else if (r.unreachable) {
@@ -179,17 +188,17 @@ async function acquireGateQuorumClaim(ticketId) {
       };
     }
 
-    if (grants >= majorityNeeded) {
-      return { success: true, grants, myHlc };
+    if (totalGrants >= majorityNeeded) {
+      return { success: true, grants: totalGrants, myHlc };
     }
 
     // If quorum unreachable due to peer network failures/partitions
-    if (grants + (peers.length - peerUnreachableCount) < majorityNeeded) {
+    if (totalGrants + (peers.length - peerUnreachableCount) < majorityNeeded) {
       return {
         success: false,
         unreachable: true,
         reason: 'quorum_unreachable',
-        grants,
+        grants: totalGrants,
       };
     }
 
@@ -242,8 +251,14 @@ async function validateAndCheckin({ token, mode = 'online', offlineHlc = null })
 
   // Check event status if local event record exists
   const localEvent = db.prepare('SELECT * FROM events WHERE id = ?').get(eventId);
-  if (localEvent && (localEvent.status === EVENT_STATUS.CANCELLED || localEvent.status === EVENT_STATUS.CLOSED)) {
-    logger.warn({ ticketId, eventId, eventStatus: localEvent.status }, 'Scan rejected: Event closed or cancelled');
+  if (
+    localEvent &&
+    (localEvent.status === EVENT_STATUS.CANCELLED || localEvent.status === EVENT_STATUS.CLOSED)
+  ) {
+    logger.warn(
+      { ticketId, eventId, eventStatus: localEvent.status },
+      'Scan rejected: Event closed or cancelled'
+    );
     return {
       success: false,
       result: CHECKIN_RESULT.REJECTED_INVALID,
@@ -256,11 +271,16 @@ async function validateAndCheckin({ token, mode = 'online', offlineHlc = null })
 
   // Rejection check: already checked in locally
   const localCheckin = db
-    .prepare("SELECT * FROM checkins WHERE ticket_id = ? AND result = 'accepted' ORDER BY created_at ASC LIMIT 1")
+    .prepare(
+      "SELECT * FROM checkins WHERE ticket_id = ? AND result = 'accepted' ORDER BY created_at ASC LIMIT 1"
+    )
     .get(ticketId);
 
   if (localCheckin) {
-    logger.info({ ticketId, gateNodeId: localCheckin.gate_node_id }, 'Scan rejected: Already checked in locally');
+    logger.info(
+      { ticketId, gateNodeId: localCheckin.gate_node_id },
+      'Scan rejected: Already checked in locally'
+    );
     return {
       success: false,
       result: CHECKIN_RESULT.REJECTED_DUPLICATE,
@@ -457,7 +477,13 @@ async function processOfflineBatch(scans) {
         VALUES (?, ?, ?, ?, 'offline', 'accepted', 0, coalesce(?, datetime('now')))
         ON CONFLICT(id) DO NOTHING
       `
-      ).run(checkinId, ticketId, scan.gateNodeId || config.nodeId, scan.hlc, scan.scannedAt || null);
+      ).run(
+        checkinId,
+        ticketId,
+        scan.gateNodeId || config.nodeId,
+        scan.hlc,
+        scan.scannedAt || null
+      );
 
       db.prepare("UPDATE tickets SET status = 'used' WHERE id = ? AND status != 'revoked'").run(
         ticketId
@@ -513,12 +539,18 @@ async function processOfflineBatch(scans) {
           VALUES (?, ?, ?, ?, 'offline', 'accepted', 0, coalesce(?, datetime('now')))
           ON CONFLICT(id) DO NOTHING
         `
-        ).run(checkinId, ticketId, scan.gateNodeId || config.nodeId, scan.hlc, scan.scannedAt || null);
+        ).run(
+          checkinId,
+          ticketId,
+          scan.gateNodeId || config.nodeId,
+          scan.hlc,
+          scan.scannedAt || null
+        );
 
         // Update previous to rejected_duplicate
-        db.prepare("UPDATE checkins SET result = 'rejected_duplicate', resolved = 1 WHERE id = ?").run(
-          existing.id
-        );
+        db.prepare(
+          "UPDATE checkins SET result = 'rejected_duplicate', resolved = 1 WHERE id = ?"
+        ).run(existing.id);
       } else {
         winnerId = existing.id;
         loserId = checkinId;
@@ -532,7 +564,13 @@ async function processOfflineBatch(scans) {
           VALUES (?, ?, ?, ?, 'offline', 'rejected_duplicate', 1, coalesce(?, datetime('now')))
           ON CONFLICT(id) DO NOTHING
         `
-        ).run(checkinId, ticketId, scan.gateNodeId || config.nodeId, scan.hlc, scan.scannedAt || null);
+        ).run(
+          checkinId,
+          ticketId,
+          scan.gateNodeId || config.nodeId,
+          scan.hlc,
+          scan.scannedAt || null
+        );
       }
 
       const conflictId = idService.generateId();

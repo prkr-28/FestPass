@@ -56,7 +56,7 @@ sequenceDiagram
     Attendee->>G1: Scan Ticket (Token)
     G1->>G1: Verify Ed25519 Signature
     G1->>G1: Grant Claim Locally (hlc1, G1)
-    
+
     par Quorum Request
         G1->>G2: POST /internal/claim { ticketId, claimant: G1, hlc1 }
         G1->>G3: POST /internal/claim { ticketId, claimant: G1, hlc1 }
@@ -96,6 +96,7 @@ When campus network infrastructure fails, or a gate is partitioned from peers:
 ### Offline Batch Sync (`POST /gate/scan-offline-batch`)
 
 Mobile gate handheld devices that were offline can submit arrays of accumulated scans:
+
 1. Replays scans strictly in causal HLC order.
 2. Identifies any duplicate scans that occurred while disconnected.
 3. Automatically triggers deterministic conflict resolution.
@@ -134,7 +135,7 @@ flowchart LR
 
 ## 6. Safety vs. Liveness Trade-Offs (CAP Theorem)
 
-| Mode | Consistency | Availability | Partition Tolerance | Latency | Distributed Guarantee |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Online Quorum** | CP (Linearizable) | Reduced during majority loss | Survives 1 gate failure out of 3 | 10–25ms | Guarantees zero double entries across all gates |
-| **Offline Fallback** | AP (Eventual) | 100% Available | Survives total gate isolation | 1–3ms | Maximizes entrance throughput; resolves via HLC CRDT upon reconnect |
+| Mode                 | Consistency       | Availability                 | Partition Tolerance              | Latency | Distributed Guarantee                                               |
+| :------------------- | :---------------- | :--------------------------- | :------------------------------- | :------ | :------------------------------------------------------------------ |
+| **Online Quorum**    | CP (Linearizable) | Reduced during majority loss | Survives 1 gate failure out of 3 | 10–25ms | Guarantees zero double entries across all gates                     |
+| **Offline Fallback** | AP (Eventual)     | 100% Available               | Survives total gate isolation    | 1–3ms   | Maximizes entrance throughput; resolves via HLC CRDT upon reconnect |

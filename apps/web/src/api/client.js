@@ -10,8 +10,16 @@
 
 import axios from 'axios';
 
-const DEFAULT_BOOTH_NODES = ['http://localhost:4001', 'http://localhost:4002', 'http://localhost:4003'];
-const DEFAULT_GATE_NODES = ['http://localhost:4004', 'http://localhost:4005', 'http://localhost:4006'];
+const DEFAULT_BOOTH_NODES = [
+  'http://localhost:4001',
+  'http://localhost:4002',
+  'http://localhost:4003',
+];
+const DEFAULT_GATE_NODES = [
+  'http://localhost:4004',
+  'http://localhost:4005',
+  'http://localhost:4006',
+];
 
 export const BOOTH_NODES = (import.meta.env?.VITE_BOOTH_NODES || '')
   .split(',')
@@ -154,7 +162,8 @@ export async function resilientRequest(options, targetType = 'booth') {
       // Do NOT failover on 400 Bad Request, 403 Forbidden, 404 Not Found, 409 Conflict/OverQuota
       // Only failover on network errors, timeouts, or 502/503/504 server down
       const status = err.response?.status;
-      const isNetworkOrTimeout = !err.response || err.code === 'ECONNABORTED' || err.message?.includes('Network Error');
+      const isNetworkOrTimeout =
+        !err.response || err.code === 'ECONNABORTED' || err.message?.includes('Network Error');
       const isServerDown = status === 502 || status === 503 || status === 504;
 
       if (!isNetworkOrTimeout && !isServerDown) {
@@ -170,7 +179,8 @@ export async function resilientRequest(options, targetType = 'booth') {
 }
 
 export const api = {
-  get: (url, config, target = 'booth') => resilientRequest({ method: 'GET', url, ...config }, target),
+  get: (url, config, target = 'booth') =>
+    resilientRequest({ method: 'GET', url, ...config }, target),
   post: (url, data, config, target = 'booth') =>
     resilientRequest({ method: 'POST', url, data, ...config }, target),
   put: (url, data, config, target = 'booth') =>

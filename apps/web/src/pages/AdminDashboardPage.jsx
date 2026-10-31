@@ -159,7 +159,8 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-2 text-2xl font-bold text-white tracking-tight">{totalSold}</div>
           <p className="mt-1 text-[11px] text-slate-400">
-            Of <span className="text-slate-200 font-mono">{totalQuota}</span> partitioned cluster capacity
+            Of <span className="text-slate-200 font-mono">{totalQuota}</span> partitioned cluster
+            capacity
           </p>
         </div>
 
@@ -187,7 +188,8 @@ export default function AdminDashboardPage() {
             {events.filter((e) => e.status === 'on_sale').length}
           </div>
           <p className="mt-1 text-[11px] text-slate-400">
-            <span className="font-mono text-cyan-300">{events.length}</span> total campus events registered
+            <span className="font-mono text-cyan-300">{events.length}</span> total campus events
+            registered
           </p>
         </div>
 
@@ -223,16 +225,29 @@ export default function AdminDashboardPage() {
           <div className="h-64 w-full">
             {boothQuotaData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={boothQuotaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart
+                  data={boothQuotaData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis dataKey="node" stroke="#64748b" fontSize={11} tickLine={false} />
                   <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
+                    contentStyle={{
+                      backgroundColor: '#0f172a',
+                      borderColor: '#334155',
+                      borderRadius: '8px',
+                    }}
                     itemStyle={{ fontSize: '12px' }}
                   />
                   <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                  <Bar dataKey="sold" name="Tickets Sold" fill="#06b6d4" stackId="a" radius={[0, 0, 4, 4]} />
+                  <Bar
+                    dataKey="sold"
+                    name="Tickets Sold"
+                    fill="#06b6d4"
+                    stackId="a"
+                    radius={[0, 0, 4, 4]}
+                  />
                   <Bar
                     dataKey="remaining"
                     name="Available Quota"
@@ -257,7 +272,10 @@ export default function AdminDashboardPage() {
               <h2 className="text-sm font-bold text-white">Event Sales Capacity</h2>
               <p className="text-[11px] text-slate-400">Total capacity vs tickets issued</p>
             </div>
-            <Link to="/admin/events" className="text-xs text-cyan-400 hover:underline flex items-center gap-1">
+            <Link
+              to="/admin/events"
+              className="text-xs text-cyan-400 hover:underline flex items-center gap-1"
+            >
               <span>View all</span>
               <ArrowUpRight className="h-3 w-3" />
             </Link>
@@ -266,15 +284,27 @@ export default function AdminDashboardPage() {
           <div className="h-64 w-full">
             {eventChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={eventChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart
+                  data={eventChartData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
                   <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
+                    contentStyle={{
+                      backgroundColor: '#0f172a',
+                      borderColor: '#334155',
+                      borderRadius: '8px',
+                    }}
                     itemStyle={{ fontSize: '12px' }}
                   />
-                  <Bar dataKey="capacity" name="Total Capacity" fill="#1e293b" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="capacity"
+                    name="Total Capacity"
+                    fill="#1e293b"
+                    radius={[4, 4, 0, 0]}
+                  />
                   <Bar dataKey="sold" name="Tickets Sold" fill="#6366f1" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -314,8 +344,8 @@ export default function AdminDashboardPage() {
                       item.type === 'ticket:issued'
                         ? 'bg-cyan-500/10 text-cyan-400'
                         : item.type === 'checkin:result'
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : 'bg-amber-500/10 text-amber-400'
+                          ? 'bg-emerald-500/10 text-emerald-400'
+                          : 'bg-amber-500/10 text-amber-400'
                     }`}
                   >
                     {item.type === 'ticket:issued' ? (

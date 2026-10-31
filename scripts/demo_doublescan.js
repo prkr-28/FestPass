@@ -9,12 +9,14 @@
  * 4. Clear formatted verdict and latency report
  */
 
+require('dotenv').config();
 const jwt = require('jsonwebtoken');
 
 const BOOTH_URL = process.env.BOOTH_URL || 'http://localhost:4001';
 const GATE1_URL = process.env.GATE1_URL || 'http://localhost:4004';
 const GATE2_URL = process.env.GATE2_URL || 'http://localhost:4005';
-const JWT_SECRET = process.env.JWT_SECRET || 'festpass-stage1-dev-jwt-secret-do-not-use-in-production';
+const JWT_SECRET =
+  process.env.JWT_SECRET || 'festpass-stage1-dev-jwt-secret-do-not-use-in-production';
 
 const adminToken = jwt.sign(
   { id: 'u_admin', name: 'Admin', email: 'admin@campus.edu', role: 'admin' },
@@ -88,7 +90,9 @@ async function runLiveClusterDemo() {
   console.log(`    Token:     ${ticket.token.slice(0, 36)}...`);
 
   // Step 2: Fire concurrent scans
-  console.log(`\n[3/3] Scanning ticket at Gate G1 (${GATE1_URL}) and Gate G2 (${GATE2_URL}) simultaneously...`);
+  console.log(
+    `\n[3/3] Scanning ticket at Gate G1 (${GATE1_URL}) and Gate G2 (${GATE2_URL}) simultaneously...`
+  );
 
   const t0 = Date.now();
   const scanPayload = JSON.stringify({ token: ticket.token, mode: 'online' });
@@ -144,10 +148,16 @@ async function runLiveClusterDemo() {
     if (isAccepted) acceptedCount++;
     if (isDup) duplicateCount++;
 
-    const badge = isAccepted ? '✓ ACCEPTED' : isDup ? '✗ REJECTED (DUPLICATE BLOCKED)' : `! ${verdict}`;
+    const badge = isAccepted
+      ? '✓ ACCEPTED'
+      : isDup
+        ? '✗ REJECTED (DUPLICATE BLOCKED)'
+        : `! ${verdict}`;
     console.log(`  ${r.gate.padEnd(16)}: ${badge.padEnd(34)} (${r.durationMs}ms latency)`);
     if (r.data?.firstCheckedInAt) {
-      console.log(`    └─ Prior check-in detected at ${r.data.firstCheckedInAt} by ${r.data.gateNodeId}`);
+      console.log(
+        `    └─ Prior check-in detected at ${r.data.firstCheckedInAt} by ${r.data.gateNodeId}`
+      );
     }
   }
 
@@ -155,10 +165,14 @@ async function runLiveClusterDemo() {
   console.log(' FINAL VERDICT:');
 
   if (acceptedCount === 1 && duplicateCount === 1) {
-    console.log('  \x1b[32m✓ CONSENSUS SUCCESS: EXACTLY 1 SCAN ACCEPTED, 1 DUPLICATE REJECTED!\x1b[0m');
+    console.log(
+      '  \x1b[32m✓ CONSENSUS SUCCESS: EXACTLY 1 SCAN ACCEPTED, 1 DUPLICATE REJECTED!\x1b[0m'
+    );
     console.log('  Distributed Gate Quorum consensus successfully prevented double entry.');
   } else {
-    console.log(`  \x1b[31m✗ UNEXPECTED OUTCOME: Accepted=${acceptedCount}, Duplicates=${duplicateCount}\x1b[0m`);
+    console.log(
+      `  \x1b[31m✗ UNEXPECTED OUTCOME: Accepted=${acceptedCount}, Duplicates=${duplicateCount}\x1b[0m`
+    );
   }
   console.log('='.repeat(80) + '\n');
 }
@@ -246,14 +260,20 @@ async function runInProcessDemo() {
     if (isAccepted) acceptedCount++;
     if (isDup) dupCount++;
 
-    const badge = isAccepted ? '✓ ACCEPTED' : isDup ? '✗ REJECTED (DUPLICATE BLOCKED)' : `! ${item.res.result}`;
+    const badge = isAccepted
+      ? '✓ ACCEPTED'
+      : isDup
+        ? '✗ REJECTED (DUPLICATE BLOCKED)'
+        : `! ${item.res.result}`;
     console.log(`  ${item.gate.padEnd(16)}: ${badge.padEnd(34)} (${item.durationMs}ms latency)`);
   }
 
   console.log('-'.repeat(80));
   console.log(' FINAL VERDICT:');
   if (acceptedCount === 1 && dupCount === 1) {
-    console.log('  \x1b[32m✓ CONSENSUS SUCCESS: EXACTLY 1 SCAN ACCEPTED, 1 DUPLICATE REJECTED!\x1b[0m');
+    console.log(
+      '  \x1b[32m✓ CONSENSUS SUCCESS: EXACTLY 1 SCAN ACCEPTED, 1 DUPLICATE REJECTED!\x1b[0m'
+    );
     console.log('  Distributed Gate Quorum consensus successfully prevented double entry.');
   } else {
     console.log(`  \x1b[31m✗ Outcome: Accepted=${acceptedCount}, Duplicate=${dupCount}\x1b[0m`);

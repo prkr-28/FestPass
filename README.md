@@ -1,9 +1,9 @@
 # FestPass: Distributed Campus Event Ticketing & Entry Validation
 
-[![Test Suite](https://img.shields.io/badge/tests-96%20passed-brightgreen.svg)]()
-[![Lint Status](https://img.shields.io/badge/lint-0%20errors-brightgreen.svg)]()
-[![Stages](https://img.shields.io/badge/stages-100%25%20completed%20(6%2F6)-blue.svg)]()
-[![Node Version](https://img.shields.io/badge/node-20%2B-green.svg)]()
+[![Test Suite](https://img.shields.io/badge/tests-96%20passed-brightgreen.svg)](<>)
+[![Lint Status](https://img.shields.io/badge/lint-0%20errors-brightgreen.svg)](<>)
+[![Stages](<https://img.shields.io/badge/stages-100%25%20completed%20(6%2F6)-blue.svg>)](<>)
+[![Node Version](https://img.shields.io/badge/node-20%2B-green.svg)](<>)
 
 FestPass is a production-quality, fault-tolerant campus ticketing and physical entry validation system built by a team of 6 engineers across 6 stages. It solves the classic distributed double-spend, ticket overselling, and concurrent physical entry problems in high-density campus festivals—even during complete network partitions and offline gate operations.
 
@@ -28,14 +28,14 @@ FestPass runs a 6-node heterogeneous distributed cluster locally using a single 
 
 ### Node Cluster Layout
 
-| Node ID | Role | Port | Database Path | Cryptographic Key | Primary Responsibilities |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`B1`** | `booth` | `4001` | `data/B1.db` | Private Key | Sells tickets, manages quota slice, gossips state |
-| **`B2`** | `booth` | `4002` | `data/B2.db` | Private Key | Sells tickets, manages quota slice, gossips state |
-| **`B3`** | `booth` | `4003` | `data/B3.db` | Private Key | Sells tickets, manages quota slice, gossips state |
-| **`G1`** | `gate` | `4004` | `data/G1.db` | Public Key | Scans tickets, quorum consensus, offline fallback |
-| **`G2`** | `gate` | `4005` | `data/G2.db` | Public Key | Scans tickets, quorum consensus, offline fallback |
-| **`G3`** | `gate` | `4006` | `data/G3.db` | Public Key | Scans tickets, quorum consensus, offline fallback |
+| Node ID  | Role    | Port   | Database Path | Cryptographic Key | Primary Responsibilities                          |
+| :------- | :------ | :----- | :------------ | :---------------- | :------------------------------------------------ |
+| **`B1`** | `booth` | `4001` | `data/B1.db`  | Private Key       | Sells tickets, manages quota slice, gossips state |
+| **`B2`** | `booth` | `4002` | `data/B2.db`  | Private Key       | Sells tickets, manages quota slice, gossips state |
+| **`B3`** | `booth` | `4003` | `data/B3.db`  | Private Key       | Sells tickets, manages quota slice, gossips state |
+| **`G1`** | `gate`  | `4004` | `data/G1.db`  | Public Key        | Scans tickets, quorum consensus, offline fallback |
+| **`G2`** | `gate`  | `4005` | `data/G2.db`  | Public Key        | Scans tickets, quorum consensus, offline fallback |
+| **`G3`** | `gate`  | `4006` | `data/G3.db`  | Public Key        | Scans tickets, quorum consensus, offline fallback |
 
 ---
 
@@ -55,10 +55,12 @@ FestPass runs a 6-node heterogeneous distributed cluster locally using a single 
 ## 🚀 Quickstart Guide
 
 ### 1. Prerequisites
+
 - Node.js 20+ (Node 22 / 24 tested)
 - npm 10+
 
 ### 2. Installation & Setup
+
 ```bash
 # Clone and install dependencies
 git clone <repo-url>
@@ -71,75 +73,93 @@ npm run seed
 ```
 
 **Default Test Accounts (from `npm run seed`):**
+
 - **Admin**: `admin@campus.edu` / `AdminPass123!`
 - **Booth Staff**: `booth1@campus.edu`, `booth2@campus.edu` / `BoothPass123!`
 - **Gate Staff**: `gate1@campus.edu`, `gate2@campus.edu` / `GatePass123!`
 
 ### 3. Start the 6-Node Server Cluster
+
 ```bash
 npm run cluster
 ```
-*Starts B1 (4001), B2 (4002), B3 (4003), G1 (4004), G2 (4005), and G3 (4006) concurrently with color-coded logs.*
+
+_Starts B1 (4001), B2 (4002), B3 (4003), G1 (4004), G2 (4005), and G3 (4006) concurrently with color-coded logs._
 
 ### 4. Start the Web Application
+
 In a second terminal:
+
 ```bash
 npm run dev -w apps/web
 ```
+
 Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 ---
 
 ## 🖥️ Web Application Routes
 
-| Path | Description | Access Role |
-| :--- | :--- | :--- |
-| `/login` | Authentication portal with viva demo quick-preset buttons | Public |
-| `/admin` | Live sales KPIs, quota bar charts, and real-time Socket.IO stream | Admin |
-| `/admin/events` | Event CRUD, capacity partitioning, and quota status | Admin |
-| `/admin/tickets` | Searchable ticket registry, status glow, and revocation modal | Admin |
-| `/admin/cluster` | Live node topology, replication lag, chaos injection & double scan demo | Admin |
-| `/booth` | POS sales form for single/group passes with high-res QR generation & print | Booth Staff / Admin |
-| `/gate` | Full-screen camera QR scanner (`html5-qrcode`) with IndexedDB offline queue | Gate Staff / Admin |
-| `/my-ticket` | Public attendee holographic pass with dynamic verification status | Public |
+| Path             | Description                                                                 | Access Role         |
+| :--------------- | :-------------------------------------------------------------------------- | :------------------ |
+| `/login`         | Authentication portal with viva demo quick-preset buttons                   | Public              |
+| `/admin`         | Live sales KPIs, quota bar charts, and real-time Socket.IO stream           | Admin               |
+| `/admin/events`  | Event CRUD, capacity partitioning, and quota status                         | Admin               |
+| `/admin/tickets` | Searchable ticket registry, status glow, and revocation modal               | Admin               |
+| `/admin/cluster` | Live node topology, replication lag, chaos injection & double scan demo     | Admin               |
+| `/booth`         | POS sales form for single/group passes with high-res QR generation & print  | Booth Staff / Admin |
+| `/gate`          | Full-screen camera QR scanner (`html5-qrcode`) with IndexedDB offline queue | Gate Staff / Admin  |
+| `/my-ticket`     | Public attendee holographic pass with dynamic verification status           | Public              |
 
 ---
 
 ## 🔬 Live Demonstration & Benchmark Scripts
 
 ### 1. Concurrent Double-Scan Invariant
+
 Fires the same ticket simultaneously at Gate G1 and Gate G2:
+
 ```bash
 npm run demo:doublescan
 ```
-*Verdict: Exactly 1 scan accepted via quorum consensus; exactly 1 rejected as duplicate.*
+
+_Verdict: Exactly 1 scan accepted via quorum consensus; exactly 1 rejected as duplicate._
 
 ### 2. Network Partition & CRDT Conflict Resolution
+
 Simulates isolated gates accepting scans offline, heals partition, and reconciles via HLC:
+
 ```bash
 npm run demo:partition
 ```
 
 ### 3. Mathematical Scenario Proof (100 Trials)
+
 Proves the zero double-spend theorem across 100 trials of 3 concurrent gate scans:
+
 ```bash
 npm run test:scenario
 ```
 
 ### 4. Latency Benchmark (Offline vs Online)
+
 Benchmarks 100 offline local scans vs 100 online quorum scans, exporting `data/benchmark_results.json`:
+
 ```bash
 npm run benchmark
 ```
 
 ### 5. High-Throughput Load Tests
+
 ```bash
 npm run loadtest:sales   # Concurrent ticket sales throughput test
 npm run loadtest:scan    # High-speed gate validation throughput test (>1000 scans/sec)
 ```
 
 ### 6. Node Process Supervisor (Port 4000)
+
 Runs the supervisor daemon to start, kill, and restart nodes for live chaos demonstrations:
+
 ```bash
 npm run supervisor
 ```
@@ -163,13 +183,13 @@ npm run build -w apps/web
 
 ## 👥 Stage Ownership & Team Delivery
 
-| Stage | Focus Area | Deliverables | Owner | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Stage 1** | Foundation & Core Primitives | Monorepo, SQLite schema, 64-bit Snowflake, HLC, Ed25519 token cryptography, API contract | Member 1 | **DONE** |
-| **Stage 2** | Auth, Events & Booth Sales | JWT auth, events CRUD, booth ticket sales, static capacity quota partitioning, quota borrowing | Member 2 | **DONE** |
-| **Stage 3** | Replication & Membership | Peer gossip, heartbeat failure detector, State-Machine CRDT apply engine, anti-entropy sync, chaos hooks | Member 3 | **DONE** |
-| **Stage 4** | Gate Validation & Quorum | Gate validation engine, majority ($2/3$) quorum claim protocol, offline mode fallback, conflict reconciliation hook | Member 4 | **DONE** |
-| **Stage 5** | Admin & Booth Frontend | Resilient multi-node failover client, Admin dashboard, event management, booth POS sales UI, attendee pass portal | Member 5 | **DONE** |
+| Stage       | Focus Area                               | Deliverables                                                                                                                    | Owner    | Status   |
+| :---------- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------ | :------- | :------- |
+| **Stage 1** | Foundation & Core Primitives             | Monorepo, SQLite schema, 64-bit Snowflake, HLC, Ed25519 token cryptography, API contract                                        | Member 1 | **DONE** |
+| **Stage 2** | Auth, Events & Booth Sales               | JWT auth, events CRUD, booth ticket sales, static capacity quota partitioning, quota borrowing                                  | Member 2 | **DONE** |
+| **Stage 3** | Replication & Membership                 | Peer gossip, heartbeat failure detector, State-Machine CRDT apply engine, anti-entropy sync, chaos hooks                        | Member 3 | **DONE** |
+| **Stage 4** | Gate Validation & Quorum                 | Gate validation engine, majority ($2/3$) quorum claim protocol, offline mode fallback, conflict reconciliation hook             | Member 4 | **DONE** |
+| **Stage 5** | Admin & Booth Frontend                   | Resilient multi-node failover client, Admin dashboard, event management, booth POS sales UI, attendee pass portal               | Member 5 | **DONE** |
 | **Stage 6** | Gate Scanner, Chaos & Final Verification | Camera QR scanner, live cluster dashboard, node supervisor daemon, performance benchmarks, and comprehensive viva documentation | Member 6 | **DONE** |
 
 ---

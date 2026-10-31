@@ -3,9 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import {
   getActiveBoothNode,
-  
   BOOTH_NODES,
-    setActiveBoothNode,
+  setActiveBoothNode,
   subscribeNodeChanges,
 } from '../api/client';
 import { Ticket, Server, LogOut, User, RefreshCw } from 'lucide-react';
@@ -14,13 +13,12 @@ export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
   const [activeBooth, setActiveBooth] = useState(getActiveBoothNode());
-  
+
   const [showNodeSelector, setShowNodeSelector] = useState(false);
 
   useEffect(() => {
     return subscribeNodeChanges(({ boothNode }) => {
       setActiveBooth(boothNode);
-      
     });
   }, []);
 
@@ -68,7 +66,9 @@ export default function Navbar() {
               <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <Server className="h-3.5 w-3.5 text-cyan-400" />
               <span className="hidden sm:inline text-slate-400">Booth:</span>
-              <span className="font-mono text-cyan-300">{activeBooth?.replace('http://localhost:', 'Port ')}</span>
+              <span className="font-mono text-cyan-300">
+                {activeBooth?.replace('http://localhost:', 'Port ')}
+              </span>
             </button>
 
             {showNodeSelector && (
@@ -100,7 +100,8 @@ export default function Navbar() {
                   })}
                 </div>
                 <div className="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400">
-                  Auto-failover is active: if a node fails, requests automatically switch to peer booths.
+                  Auto-failover is active: if a node fails, requests automatically switch to peer
+                  booths.
                 </div>
               </div>
             )}

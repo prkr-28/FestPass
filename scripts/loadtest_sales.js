@@ -7,11 +7,13 @@
  * Produces formatted performance results table.
  */
 
+require('dotenv').config();
 const autocannon = require('autocannon');
 const jwt = require('jsonwebtoken');
 
 const BOOTH_URL = process.env.BOOTH_URL || 'http://localhost:4001';
-const JWT_SECRET = process.env.JWT_SECRET || 'festpass-stage1-dev-jwt-secret-do-not-use-in-production';
+const JWT_SECRET =
+  process.env.JWT_SECRET || 'festpass-stage1-dev-jwt-secret-do-not-use-in-production';
 
 const adminToken = jwt.sign(
   { id: 'u_admin', name: 'Admin', email: 'admin@campus.edu', role: 'admin' },
@@ -41,7 +43,7 @@ async function main() {
     const ticketService = require('../apps/server/src/services/ticketService');
 
     config.nodeRole = 'both';
-    
+
     // Create event with 100 capacity (partitioned across booths)
     const event = await eventService.upsertEvent({
       name: 'Autocannon Benchmark Fest ' + Date.now(),
@@ -111,7 +113,9 @@ async function main() {
         console.error('Load test error:', err);
         return;
       }
-      console.log('--------------------------------------------------------------------------------');
+      console.log(
+        '--------------------------------------------------------------------------------'
+      );
       console.log(`Requests/sec (Avg):   ${result.requests.average}`);
       console.log(`Throughput (Bytes/s): ${(result.throughput.average / 1024).toFixed(1)} KB/s`);
       console.log(`Latency p50:          ${result.latency.p50} ms`);
@@ -119,7 +123,9 @@ async function main() {
       console.log(`Latency p99:          ${result.latency.p99} ms`);
       console.log(`2xx Responses:        ${result['2xx']}`);
       console.log(`4xx Responses:        ${result['4xx']}`);
-      console.log('--------------------------------------------------------------------------------');
+      console.log(
+        '--------------------------------------------------------------------------------'
+      );
       console.log('\x1b[32m✓ Live Autocannon load test completed successfully!\x1b[0m\n');
     }
   );

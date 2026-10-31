@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api, getActiveGateNode, setActiveGateNode, GATE_NODES } from '../api/client';
-import {
-  saveOfflineScan,
-  getPendingOfflineScans,
-  syncOfflineScans,
-} from '../lib/offlineQueue';
+import { saveOfflineScan, getPendingOfflineScans, syncOfflineScans } from '../lib/offlineQueue';
 import {
   QrCode,
   CheckCircle2,
@@ -113,7 +109,11 @@ export default function GateScannerPage() {
         setIsOffline(true);
         toast.error('Gate unreachable: saving to offline queue');
 
-        const gateId = selectedGate.includes('4004') ? 'G1' : selectedGate.includes('4005') ? 'G2' : 'G3';
+        const gateId = selectedGate.includes('4004')
+          ? 'G1'
+          : selectedGate.includes('4005')
+            ? 'G2'
+            : 'G3';
         await saveOfflineScan({
           token: tokenString.trim(),
           gateNodeId: gateId,
@@ -253,8 +253,9 @@ export default function GateScannerPage() {
           <div className="flex items-center gap-3">
             <WifiOff className="h-5 w-5 text-amber-400 shrink-0" />
             <div>
-              <span className="font-bold">Offline Scanning Active:</span> Gate is currently partitioned.
-              Scans are cryptographically validated locally and queued for anti-entropy sync.
+              <span className="font-bold">Offline Scanning Active:</span> Gate is currently
+              partitioned. Scans are cryptographically validated locally and queued for anti-entropy
+              sync.
             </div>
           </div>
           {pendingCount > 0 && (
@@ -263,7 +264,11 @@ export default function GateScannerPage() {
               disabled={isSyncing}
               className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-1.5 font-bold text-slate-950 hover:bg-amber-400 transition"
             >
-              {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {isSyncing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
               <span>Sync ({pendingCount})</span>
             </button>
           )}
@@ -301,58 +306,67 @@ export default function GateScannerPage() {
       </div>
 
       {/* Result Display Banner */}
-      {activeScanResult && (() => {
-        const style = getVerdictStyle(activeScanResult.result);
-        const Icon = style.icon;
-        return (
-          <div
-            className={`rounded-3xl border-2 p-6 transition-all duration-300 shadow-2xl ${style.bg}`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-2xl bg-black/30 flex items-center justify-center shrink-0">
-                  <Icon className="h-8 w-8" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase ${style.badge}`}>
-                      {style.title}
-                    </span>
-                    <span className="text-xs font-mono text-slate-300">
-                      {activeScanResult.latencyMs}ms latency
-                    </span>
+      {activeScanResult &&
+        (() => {
+          const style = getVerdictStyle(activeScanResult.result);
+          const Icon = style.icon;
+          return (
+            <div
+              className={`rounded-3xl border-2 p-6 transition-all duration-300 shadow-2xl ${style.bg}`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-black/30 flex items-center justify-center shrink-0">
+                    <Icon className="h-8 w-8" />
                   </div>
-                  <div className="mt-1.5 text-xs text-slate-200">
-                    {activeScanResult.result === 'accepted' ? (
-                      <span>
-                        Ticket <span className="font-mono font-bold">{activeScanResult.ticketId}</span> verified.
-                        Mode: <span className="uppercase font-semibold text-cyan-300">{activeScanResult.mode}</span>
-                        {activeScanResult.offlineQueued && ' (Queued locally)'}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase ${style.badge}`}
+                      >
+                        {style.title}
                       </span>
-                    ) : activeScanResult.result === 'rejected_duplicate' ? (
-                      <span>
-                        First scanned at <span className="font-semibold">{activeScanResult.firstCheckedInAt}</span> by{' '}
-                        <span className="font-mono font-bold text-cyan-300">
-                          {activeScanResult.gateNodeId || 'Peer Gate'}
+                      <span className="text-xs font-mono text-slate-300">
+                        {activeScanResult.latencyMs}ms latency
+                      </span>
+                    </div>
+                    <div className="mt-1.5 text-xs text-slate-200">
+                      {activeScanResult.result === 'accepted' ? (
+                        <span>
+                          Ticket{' '}
+                          <span className="font-mono font-bold">{activeScanResult.ticketId}</span>{' '}
+                          verified. Mode:{' '}
+                          <span className="uppercase font-semibold text-cyan-300">
+                            {activeScanResult.mode}
+                          </span>
+                          {activeScanResult.offlineQueued && ' (Queued locally)'}
                         </span>
-                      </span>
-                    ) : (
-                      <span>{activeScanResult.error}</span>
-                    )}
+                      ) : activeScanResult.result === 'rejected_duplicate' ? (
+                        <span>
+                          First scanned at{' '}
+                          <span className="font-semibold">{activeScanResult.firstCheckedInAt}</span>{' '}
+                          by{' '}
+                          <span className="font-mono font-bold text-cyan-300">
+                            {activeScanResult.gateNodeId || 'Peer Gate'}
+                          </span>
+                        </span>
+                      ) : (
+                        <span>{activeScanResult.error}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <button
-                onClick={() => setActiveScanResult(null)}
-                className="text-slate-400 hover:text-white text-xs font-medium"
-              >
-                Dismiss
-              </button>
+                <button
+                  onClick={() => setActiveScanResult(null)}
+                  className="text-slate-400 hover:text-white text-xs font-medium"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Scanner Mode Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -396,8 +410,9 @@ export default function GateScannerPage() {
               </span>
             </div>
             <p className="text-xs text-slate-400 mb-4">
-              Paste or type any Ed25519 signed ticket string (`FP1.&lt;ticketId&gt;.&lt;eventId&gt;.&lt;sig&gt;`) to
-              execute verification against Gate Quorum.
+              Paste or type any Ed25519 signed ticket string
+              (`FP1.&lt;ticketId&gt;.&lt;eventId&gt;.&lt;sig&gt;`) to execute verification against
+              Gate Quorum.
             </p>
 
             <form onSubmit={handleManualSubmit} className="space-y-3">

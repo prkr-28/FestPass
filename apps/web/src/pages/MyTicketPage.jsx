@@ -108,7 +108,8 @@ export default function MyTicketPage() {
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-white">Attendee Pass Portal</h1>
         <p className="text-xs text-slate-400 mt-1">
-          Look up your official campus event pass, check live entry status, and present your QR code at any gate
+          Look up your official campus event pass, check live entry status, and present your QR code
+          at any gate
         </p>
 
         {/* Search Bar */}

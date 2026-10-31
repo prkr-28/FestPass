@@ -126,6 +126,22 @@ async function seed() {
       const hlc = new HLC({ nodeId });
 
       db.transaction(() => {
+        // Clean operational runtime tables for pristine convergence
+        try {
+          db.prepare('DELETE FROM checkins').run();
+          db.prepare('DELETE FROM tickets').run();
+          db.prepare('DELETE FROM conflicts').run();
+          db.prepare('DELETE FROM op_log').run();
+          db.prepare('DELETE FROM ticket_claims').run();
+          db.prepare('DELETE FROM outbox').run();
+          db.prepare('DELETE FROM booth_quotas').run();
+          db.prepare(`DELETE FROM events WHERE id NOT IN (${EVENTS.map(() => '?').join(',')})`).run(
+            ...EVENTS.map((e) => e.id)
+          );
+        } catch (_err) {
+          // In case some tables don't exist yet before migrations
+        }
+
         // 1. Seed Users
         const insertUser = db.prepare(`
           INSERT INTO users (id, name, email, password_hash, role)

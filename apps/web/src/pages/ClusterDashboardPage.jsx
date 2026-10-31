@@ -1,15 +1,9 @@
 import { useState, useEffect } from 'react';
-import { api } from '../api/client';
+import axios from 'axios';
+import { api, GATE_NODES } from '../api/client';
 import { onSocketEvent } from '../lib/socket';
 import { formatDate } from '../lib/utils';
-import {
-  Zap,
-  Play,
-  RotateCcw,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-} from 'lucide-react';
+import { Zap, Play, RotateCcw, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function ClusterDashboardPage() {
@@ -17,7 +11,7 @@ export default function ClusterDashboardPage() {
   const [conflicts, setConflicts] = useState([]);
   const [replicationMeta, setReplicationMeta] = useState(null);
   const [activeTab, setActiveTab] = useState('topology'); // 'topology' | 'conflicts' | 'chaos'
-  
+
   // Chaos settings
   const [chaosAction, setChaosAction] = useState('partition');
   const [chaosTarget, setChaosTarget] = useState('G1');
@@ -44,7 +38,7 @@ export default function ClusterDashboardPage() {
       console.error('Failed to query cluster state:', err);
     } finally {
       /* done */
-          }
+    }
   };
 
   useEffect(() => {
@@ -122,9 +116,15 @@ export default function ClusterDashboardPage() {
 
       // 3. Simultaneously fire scans at G1 and G2
       const t0 = Date.now();
+      const g1Url = GATE_NODES[0] || 'http://localhost:4004';
+      const g2Url = GATE_NODES[1] || 'http://localhost:4005';
       const [resG1, resG2] = await Promise.all([
-        api.post('/api/gate/scan', { token, mode: 'online' }, {}, 'gate').catch((e) => e.response || e),
-        api.post('/api/gate/scan', { token, mode: 'online' }, {}, 'gate').catch((e) => e.response || e),
+        axios
+          .post(`${g1Url}/api/gate/scan`, { token, mode: 'online' }, { timeout: 3500 })
+          .catch((e) => e.response || e),
+        axios
+          .post(`${g2Url}/api/gate/scan`, { token, mode: 'online' }, { timeout: 3500 })
+          .catch((e) => e.response || e),
       ]);
 
       const g1Data = resG1.data || {};
@@ -176,9 +176,12 @@ export default function ClusterDashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Live Cluster & Chaos Studio</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            Live Cluster & Chaos Studio
+          </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Real-time node topology, failure detection state machine, CRDT conflict log, and chaos simulator
+            Real-time node topology, failure detection state machine, CRDT conflict log, and chaos
+            simulator
           </p>
         </div>
 
@@ -187,7 +190,9 @@ export default function ClusterDashboardPage() {
           <button
             onClick={() => setActiveTab('topology')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'topology' ? 'bg-cyan-500 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              activeTab === 'topology'
+                ? 'bg-cyan-500 text-white shadow'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Node Topology (6)
@@ -195,7 +200,9 @@ export default function ClusterDashboardPage() {
           <button
             onClick={() => setActiveTab('conflicts')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
-              activeTab === 'conflicts' ? 'bg-cyan-500 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              activeTab === 'conflicts'
+                ? 'bg-cyan-500 text-white shadow'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <span>Conflicts</span>
@@ -208,7 +215,9 @@ export default function ClusterDashboardPage() {
           <button
             onClick={() => setActiveTab('chaos')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
-              activeTab === 'chaos' ? 'bg-cyan-500 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              activeTab === 'chaos'
+                ? 'bg-cyan-500 text-white shadow'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Zap className="h-3.5 w-3.5" />
@@ -254,13 +263,17 @@ export default function ClusterDashboardPage() {
                       <span className="text-[10px] text-slate-500 block uppercase font-sans">
                         Replication Lag
                       </span>
-                      <span className="text-slate-200 font-bold">{node.replicationLagOps || 0} ops</span>
+                      <span className="text-slate-200 font-bold">
+                        {node.replicationLagOps || 0} ops
+                      </span>
                     </div>
                     <div className="rounded-lg bg-slate-950 p-2">
                       <span className="text-[10px] text-slate-500 block uppercase font-sans">
                         Heartbeat Jitter
                       </span>
-                      <span className="text-slate-200 font-bold">{node.replicationLagMs || 0} ms</span>
+                      <span className="text-slate-200 font-bold">
+                        {node.replicationLagMs || 0} ms
+                      </span>
                     </div>
                   </div>
 
@@ -364,11 +377,13 @@ export default function ClusterDashboardPage() {
                 <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/20 border border-cyan-500/40 px-2.5 py-0.5 text-[10px] font-bold text-cyan-300 uppercase tracking-widest mb-1.5">
                   Live Distributed Proof
                 </span>
-                <h2 className="text-lg font-bold text-white">One-Click Concurrent Double-Scan Demo</h2>
+                <h2 className="text-lg font-bold text-white">
+                  One-Click Concurrent Double-Scan Demo
+                </h2>
                 <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
-                  Issues an Ed25519-signed ticket on Booth B1 and fires simultaneous scans at Gate G1 and Gate
-                  G2 at the exact same millisecond. Proves that Distributed Gate Quorum guarantees exactly one
-                  acceptance and one duplicate rejection.
+                  Issues an Ed25519-signed ticket on Booth B1 and fires simultaneous scans at Gate
+                  G1 and Gate G2 at the exact same millisecond. Proves that Distributed Gate Quorum
+                  guarantees exactly one acceptance and one duplicate rejection.
                 </p>
               </div>
 
@@ -406,8 +421,12 @@ export default function ClusterDashboardPage() {
                         : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
                     }`}
                   >
-                    <div className="font-bold">Gate G1: {demoResult.gate1.result.toUpperCase()}</div>
-                    <div className="text-[11px] text-slate-400">{demoResult.gate1.latency || 12}ms latency</div>
+                    <div className="font-bold">
+                      Gate G1: {demoResult.gate1.result.toUpperCase()}
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {demoResult.gate1.latency || 12}ms latency
+                    </div>
                   </div>
                   <div
                     className={`rounded-xl p-3 border ${
@@ -416,8 +435,12 @@ export default function ClusterDashboardPage() {
                         : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
                     }`}
                   >
-                    <div className="font-bold">Gate G2: {demoResult.gate2.result.toUpperCase()}</div>
-                    <div className="text-[11px] text-slate-400">{demoResult.gate2.latency || 12}ms latency</div>
+                    <div className="font-bold">
+                      Gate G2: {demoResult.gate2.result.toUpperCase()}
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {demoResult.gate2.latency || 12}ms latency
+                    </div>
                   </div>
                 </div>
               </div>
@@ -428,7 +451,8 @@ export default function ClusterDashboardPage() {
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl">
             <h2 className="text-base font-bold text-white mb-1">Chaos & Fault Injection Engine</h2>
             <p className="text-xs text-slate-400 mb-5">
-              Simulate network partitions, 4G latency, and packet drops between distributed peer nodes
+              Simulate network partitions, 4G latency, and packet drops between distributed peer
+              nodes
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
@@ -474,7 +498,9 @@ export default function ClusterDashboardPage() {
                 </div>
               ) : chaosAction === 'drop' ? (
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Drop Rate (0.0 - 1.0)</label>
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Drop Rate (0.0 - 1.0)
+                  </label>
                   <input
                     type="number"
                     min="0"

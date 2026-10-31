@@ -166,7 +166,8 @@ export default function LoginPage() {
             onClick={() => navigate('/my-ticket')}
             className="text-xs text-slate-400 hover:text-cyan-400 transition"
           >
-            Looking for your festival ticket? <span className="underline font-medium">Attendee Pass Portal →</span>
+            Looking for your festival ticket?{' '}
+            <span className="underline font-medium">Attendee Pass Portal →</span>
           </button>
         </div>
       </div>

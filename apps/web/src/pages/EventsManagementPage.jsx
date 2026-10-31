@@ -70,9 +70,7 @@ export default function EventsManagementPage() {
     setEditingEvent(event);
     setFormName(event.name);
     setFormVenue(event.venue);
-    setFormStartsAt(
-      event.starts_at ? new Date(event.starts_at).toISOString().slice(0, 16) : ''
-    );
+    setFormStartsAt(event.starts_at ? new Date(event.starts_at).toISOString().slice(0, 16) : '');
     setFormCapacity(event.capacity);
     setFormPrice(event.price);
     setFormStatus(event.status);
@@ -226,7 +224,9 @@ export default function EventsManagementPage() {
                     </td>
                     <td className="py-3.5 px-4 text-slate-300">
                       <div>{e.venue}</div>
-                      <div className="text-[11px] text-slate-500">{formatDate(e.starts_at || e.startsAt)}</div>
+                      <div className="text-[11px] text-slate-500">
+                        {formatDate(e.starts_at || e.startsAt)}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 font-mono font-medium text-emerald-400">
                       {formatCurrency(e.price)}
@@ -365,8 +365,8 @@ export default function EventsManagementPage() {
                 <AlertCircle className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
                 <span>
                   Capacity ({formCapacity}) will be divided evenly across booths (e.g.{' '}
-                  {Math.floor(formCapacity / 3)} each + remainder to B1). Each booth node can only sell from its own
-                  quota.
+                  {Math.floor(formCapacity / 3)} each + remainder to B1). Each booth node can only
+                  sell from its own quota.
                 </span>
               </div>
 
@@ -417,7 +417,9 @@ export default function EventsManagementPage() {
                   className="rounded-xl border border-slate-800 bg-slate-950 p-3.5 flex items-center justify-between"
                 >
                   <div>
-                    <span className="font-mono font-bold text-cyan-300 text-sm">Node {q.node_id}</span>
+                    <span className="font-mono font-bold text-cyan-300 text-sm">
+                      Node {q.node_id}
+                    </span>
                     <span className="ml-2 text-xs text-slate-400">Booth Staff</span>
                   </div>
                   <div className="text-right">

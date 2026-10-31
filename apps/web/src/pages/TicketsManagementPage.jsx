@@ -114,9 +114,12 @@ export default function TicketsManagementPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Ticket Registry & Revocation</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white">
+          Ticket Registry & Revocation
+        </h1>
         <p className="text-xs text-slate-400 mt-0.5">
-          Lookup issued passes across all cluster booths, verify status, check fraud flags, and revoke tickets
+          Lookup issued passes across all cluster booths, verify status, check fraud flags, and
+          revoke tickets
         </p>
       </div>
 
@@ -165,7 +168,11 @@ export default function TicketsManagementPage() {
               disabled={isLoading}
               className="flex items-center gap-1.5 rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-cyan-500 transition disabled:opacity-50"
             >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
               <span>Search</span>
             </button>
           </div>
@@ -197,7 +204,8 @@ export default function TicketsManagementPage() {
               ) : tickets.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="py-12 text-center text-slate-500">
-                    Use the search filters above to query tickets by attendee email, phone, or Snowflake ID.
+                    Use the search filters above to query tickets by attendee email, phone, or
+                    Snowflake ID.
                   </td>
                 </tr>
               ) : (
@@ -210,9 +218,7 @@ export default function TicketsManagementPage() {
 
                   return (
                     <tr key={id} className="hover:bg-slate-800/30 transition">
-                      <td className="py-3.5 px-4 font-mono font-medium text-cyan-300">
-                        {id}
-                      </td>
+                      <td className="py-3.5 px-4 font-mono font-medium text-cyan-300">{id}</td>
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-slate-200">{name}</div>
                         <div className="text-[11px] text-slate-400">
@@ -222,9 +228,7 @@ export default function TicketsManagementPage() {
                       <td className="py-3.5 px-4 text-slate-300">
                         {t.eventName || t.eventId || t.event_id}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-400">
-                        Node {node}
-                      </td>
+                      <td className="py-3.5 px-4 font-mono text-slate-400">Node {node}</td>
                       <td className="py-3.5 px-4">{getStatusBadge(t)}</td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -308,7 +312,11 @@ export default function TicketsManagementPage() {
                 disabled={isRevoking}
                 className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-rose-500 disabled:opacity-50"
               >
-                {isRevoking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldBan className="h-3.5 w-3.5" />}
+                {isRevoking ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ShieldBan className="h-3.5 w-3.5" />
+                )}
                 <span>Confirm Revocation</span>
               </button>
             </div>

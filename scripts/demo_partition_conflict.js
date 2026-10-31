@@ -14,12 +14,14 @@
  * 5. Works against both a live 6-node HTTP cluster or standalone in-process
  */
 
+require('dotenv').config();
 const jwt = require('jsonwebtoken');
 
 const BOOTH_URL = process.env.BOOTH_URL || 'http://localhost:4001';
 const GATE1_URL = process.env.GATE1_URL || 'http://localhost:4004';
 const GATE2_URL = process.env.GATE2_URL || 'http://localhost:4005';
-const JWT_SECRET = process.env.JWT_SECRET || 'festpass-stage1-dev-jwt-secret-do-not-use-in-production';
+const JWT_SECRET =
+  process.env.JWT_SECRET || 'festpass-stage1-dev-jwt-secret-do-not-use-in-production';
 
 const adminToken = jwt.sign(
   { id: 'u_admin', name: 'Admin', email: 'admin@campus.edu', role: 'admin' },
@@ -116,7 +118,9 @@ async function runLiveClusterDemo() {
   console.log(`  ✓ Network partition active! Gates G1 and G2 cannot communicate with peer quorum.`);
 
   // 3. Scan ticket in offline mode at G1, then at G2 slightly later
-  console.log(`\n[4/5] Attendee scans at Gate G1 (offline), then duplicate scans at Gate G2 (offline)...`);
+  console.log(
+    `\n[4/5] Attendee scans at Gate G1 (offline), then duplicate scans at Gate G2 (offline)...`
+  );
 
   const t0 = Date.now();
   const scanG1 = await fetch(`${GATE1_URL}/api/gate/scan`, {
@@ -134,8 +138,12 @@ async function runLiveClusterDemo() {
     body: JSON.stringify({ token: ticket.token, mode: 'offline' }),
   }).then(async (r) => ({ gate: 'G2', status: r.status, data: await r.json() }));
 
-  console.log(`  Gate G1 verdict: ${scanG1.data.result} (Checkin ID: ${scanG1.data.checkinId || 'N/A'})`);
-  console.log(`  Gate G2 verdict: ${scanG2.data.result} (Checkin ID: ${scanG2.data.checkinId || 'N/A'})`);
+  console.log(
+    `  Gate G1 verdict: ${scanG1.data.result} (Checkin ID: ${scanG1.data.checkinId || 'N/A'})`
+  );
+  console.log(
+    `  Gate G2 verdict: ${scanG2.data.result} (Checkin ID: ${scanG2.data.checkinId || 'N/A'})`
+  );
 
   // 4. Heal the partition
   console.log(`\n[5/5] Healing network partition & triggering Anti-Entropy Sync...`);
@@ -221,7 +229,15 @@ async function runInProcessDemo() {
     db.prepare(
       `INSERT INTO events (id, name, venue, starts_at, capacity, price, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-    ).run(event.id, event.name, event.venue, event.starts_at, event.capacity, event.price, event.status);
+    ).run(
+      event.id,
+      event.name,
+      event.venue,
+      event.starts_at,
+      event.capacity,
+      event.price,
+      event.status
+    );
   }
 
   // Step 1: Issue ticket
@@ -290,7 +306,9 @@ async function runInProcessDemo() {
   });
 
   // Step 4: Inspect outcome
-  const checkinsAfter = db.prepare('SELECT * FROM checkins WHERE ticket_id = ? ORDER BY hlc ASC').all(ticketId);
+  const checkinsAfter = db
+    .prepare('SELECT * FROM checkins WHERE ticket_id = ? ORDER BY hlc ASC')
+    .all(ticketId);
   const conflicts = db.prepare('SELECT * FROM conflicts WHERE ticket_id = ?').all(ticketId);
   const ticketAfter = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
 
@@ -299,21 +317,32 @@ async function runInProcessDemo() {
 
   for (const c of checkinsAfter) {
     const isWinner = c.result === 'accepted';
-    const tag = isWinner ? '\x1b[32m[WINNER - ACCEPTED]\x1b[0m' : '\x1b[31m[LOSER - REJECTED DUPLICATE]\x1b[0m';
-    console.log(`  Gate ${c.gate_node_id.padEnd(4)}: ${tag} | HLC: ${c.hlc} | Resolved: ${c.resolved === 1 ? 'true' : 'false'}`);
+    const tag = isWinner
+      ? '\x1b[32m[WINNER - ACCEPTED]\x1b[0m'
+      : '\x1b[31m[LOSER - REJECTED DUPLICATE]\x1b[0m';
+    console.log(
+      `  Gate ${c.gate_node_id.padEnd(4)}: ${tag} | HLC: ${c.hlc} | Resolved: ${c.resolved === 1 ? 'true' : 'false'}`
+    );
   }
 
   console.log('-'.repeat(80));
   console.log(`  Ticket Status:      ${ticketAfter.status.toUpperCase()}`);
-  console.log(`  Fraud Alert Flag:   ${ticketAfter.fraud_alert === 1 ? '\x1b[31mACTIVE (FLAGGED)\x1b[0m' : 'CLEAR'}`);
+  console.log(
+    `  Fraud Alert Flag:   ${ticketAfter.fraud_alert === 1 ? '\x1b[31mACTIVE (FLAGGED)\x1b[0m' : 'CLEAR'}`
+  );
   console.log(`  Conflicts Logged:   ${conflicts.length} conflict record(s) in database`);
 
   if (conflicts.length > 0) {
     const c0 = conflicts[0];
-    const details = typeof c0.details_json === 'string' ? JSON.parse(c0.details_json) : c0.details_json;
+    const details =
+      typeof c0.details_json === 'string' ? JSON.parse(c0.details_json) : c0.details_json;
     console.log(`\n  Conflict Details:`);
-    console.log(`    Winner Checkin ID: ${c0.winner_checkin_id} (${details.winnerGate} at HLC ${details.winnerHlc})`);
-    console.log(`    Loser Checkin ID:  ${c0.loser_checkin_id} (${details.loserGate} at HLC ${details.loserHlc})`);
+    console.log(
+      `    Winner Checkin ID: ${c0.winner_checkin_id} (${details.winnerGate} at HLC ${details.winnerHlc})`
+    );
+    console.log(
+      `    Loser Checkin ID:  ${c0.loser_checkin_id} (${details.loserGate} at HLC ${details.loserHlc})`
+    );
     console.log(`    Resolution Reason: ${details.reason}`);
   }
 
@@ -343,7 +372,9 @@ function printReport({ ticketId, scanG1, scanG2, conflicts, elapsedMs }) {
   console.log(`  Gate G2 Status:   ${scanG2.data?.result || 'N/A'}`);
   console.log(`  Conflicts Logged: ${conflicts.length}`);
   console.log('-'.repeat(80));
-  console.log('  \x1b[32m✓ DEMO COMPLETE: Offline partition healed and reconciled cleanly.\x1b[0m\n');
+  console.log(
+    '  \x1b[32m✓ DEMO COMPLETE: Offline partition healed and reconciled cleanly.\x1b[0m\n'
+  );
 }
 
 if (require.main === module) {

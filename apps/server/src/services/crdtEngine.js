@@ -360,9 +360,9 @@ function applyCheckinRecorded(db, op, payload) {
     const losers = acceptedCheckins.slice(1);
 
     for (const loser of losers) {
-      db.prepare("UPDATE checkins SET result = 'rejected_duplicate', resolved = 1 WHERE id = ?").run(
-        loser.id
-      );
+      db.prepare(
+        "UPDATE checkins SET result = 'rejected_duplicate', resolved = 1 WHERE id = ?"
+      ).run(loser.id);
 
       const conflictId = `${winner.id}_${loser.id}`;
       const details = {

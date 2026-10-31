@@ -45,7 +45,9 @@ async function main() {
   console.log('='.repeat(80) + '\n');
 
   const isLive = await checkLiveCluster();
-  console.log(`Execution Mode: ${isLive ? 'Live HTTP Cluster (G1, G2, G3)' : 'High-Fidelity In-Process Consensus'}`);
+  console.log(
+    `Execution Mode: ${isLive ? 'Live HTTP Cluster (G1, G2, G3)' : 'High-Fidelity In-Process Consensus'}`
+  );
 
   config.nodeRole = 'both';
   createApp();
@@ -137,14 +139,18 @@ async function main() {
   console.log(' EXPERIMENT RESULTS SUMMARY (100 TRIALS x 3 CONCURRENT GATES)');
   console.log('-'.repeat(80));
   console.log(`Total Trials:                 100`);
-  console.log(`Passed (Exactly 1 Accepted):  ${passCount} / 100 (${((passCount / 100) * 100).toFixed(1)}%)`);
+  console.log(
+    `Passed (Exactly 1 Accepted):  ${passCount} / 100 (${((passCount / 100) * 100).toFixed(1)}%)`
+  );
   console.log(`Failed:                       ${failCount}`);
   console.log(`Average Quorum Latency:       ${avgLatency} ms`);
   console.log(`p95 Latency:                  ${p95Latency} ms`);
   console.log('-'.repeat(80));
 
   if (failCount === 0) {
-    console.log(' \x1b[32m✓ MATHEMATICAL PROOF CONFIRMED: ZERO DOUBLE-SPEND UNDER CONCURRENCY!\x1b[0m\n');
+    console.log(
+      ' \x1b[32m✓ MATHEMATICAL PROOF CONFIRMED: ZERO DOUBLE-SPEND UNDER CONCURRENCY!\x1b[0m\n'
+    );
   } else {
     console.log(' \x1b[31m✗ Proof failed on some trials.\x1b[0m\n');
     process.exit(1);

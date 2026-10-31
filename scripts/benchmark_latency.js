@@ -73,7 +73,9 @@ async function runBenchmark() {
   console.log(' BENCHMARK COMPARISON RESULTS');
   console.log('-'.repeat(80));
   console.log(' Metric              | Offline Local Scan (ms) | Online Quorum Scan (ms) | Speedup');
-  console.log('---------------------+-------------------------+-------------------------+---------');
+  console.log(
+    '---------------------+-------------------------+-------------------------+---------'
+  );
   console.log(
     ` Mean Latency        | ${offlineStats.avg.toFixed(2).padEnd(23)} | ${onlineStats.avg.toFixed(2).padEnd(23)} | ${(onlineStats.avg / offlineStats.avg).toFixed(1)}x faster`
   );
@@ -88,8 +90,12 @@ async function runBenchmark() {
   );
   console.log('-'.repeat(80));
   console.log(' Analysis:');
-  console.log('  • Offline local validation verifies Ed25519 signatures in < 2ms without network calls.');
-  console.log('  • Online quorum validation coordinates across gates in ~10-15ms to guarantee 0 double-spends.');
+  console.log(
+    '  • Offline local validation verifies Ed25519 signatures in < 2ms without network calls.'
+  );
+  console.log(
+    '  • Online quorum validation coordinates across gates in ~10-15ms to guarantee 0 double-spends.'
+  );
   console.log('-'.repeat(80));
 
   // Export chart-friendly JSON and CSV

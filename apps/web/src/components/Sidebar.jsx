@@ -65,7 +65,9 @@ export default function Sidebar() {
   return (
     <aside className="hidden lg:flex w-64 flex-col border-r border-slate-800 bg-slate-950/60 p-4">
       <div className="mb-4 px-2">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Navigation</h2>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          Navigation
+        </h2>
       </div>
 
       <nav className="flex-1 space-y-1">

@@ -180,9 +180,7 @@ describe('Gate Validation, Quorum Consensus & Conflict Resolution (Stage 4)', ()
 
   it('enforces RBAC and Node Role: booth role and unauthorized users are rejected', async () => {
     // 1. Unauthorized request
-    const unauthRes = await request(app)
-      .post('/gate/scan')
-      .send({ token: validTicketToken });
+    const unauthRes = await request(app).post('/gate/scan').send({ token: validTicketToken });
     expect(unauthRes.status).toBe(401);
 
     // 2. Wrong staff role (booth_staff cannot scan at gates)
@@ -267,10 +265,12 @@ describe('Gate Validation, Quorum Consensus & Conflict Resolution (Stage 4)', ()
     const eventId = sampleEventId;
 
     // Insert ticket record
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO tickets (id, event_id, holder_name, holder_email, holder_phone, issued_by_node, issued_at_hlc, status, token, created_at)
       VALUES (?, ?, 'Offline Attendee', 'off@campus.edu', '123', 'B1', '1000:0:B1', 'valid', 'token', datetime('now'))
-    `).run(testTicketId, eventId);
+    `
+    ).run(testTicketId, eventId);
 
     // Scan at G1 in offline mode at HLC 2000
     const hlcG1 = '1761820200000:0:G1';
@@ -381,9 +381,7 @@ describe('Gate Validation, Quorum Consensus & Conflict Resolution (Stage 4)', ()
 
   it('GET /gate/stats returns entrance statistics and duplicate counts', async () => {
     config.nodeRole = 'gate';
-    const res = await request(app)
-      .get('/gate/stats')
-      .set('Authorization', `Bearer ${gateToken}`);
+    const res = await request(app).get('/gate/stats').set('Authorization', `Bearer ${gateToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);

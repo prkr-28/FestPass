@@ -202,7 +202,9 @@ export default function BoothSalesPage() {
                       <div className="text-[11px] text-slate-400 mt-1 truncate">{e.venue}</div>
                       <div className="mt-2 flex items-center justify-between text-xs font-mono font-bold text-emerald-400">
                         <span>{formatCurrency(e.price)}</span>
-                        <span className="text-[10px] text-slate-400 font-normal">Cap: {e.capacity}</span>
+                        <span className="text-[10px] text-slate-400 font-normal">
+                          Cap: {e.capacity}
+                        </span>
                       </div>
                     </button>
                   );
@@ -217,9 +219,7 @@ export default function BoothSalesPage() {
               type="button"
               onClick={() => setIsGroup(false)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                !isGroup
-                  ? 'bg-cyan-500 text-white shadow'
-                  : 'text-slate-400 hover:text-slate-200'
+                !isGroup ? 'bg-cyan-500 text-white shadow' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Single Attendee
@@ -228,9 +228,7 @@ export default function BoothSalesPage() {
               type="button"
               onClick={() => setIsGroup(true)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                isGroup
-                  ? 'bg-cyan-500 text-white shadow'
-                  : 'text-slate-400 hover:text-slate-200'
+                isGroup ? 'bg-cyan-500 text-white shadow' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Group Booking (Bulk up to 20)
@@ -295,7 +293,8 @@ export default function BoothSalesPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-400">
-                  Add up to 20 attendees. All tickets will be generated atomically in a single transaction.
+                  Add up to 20 attendees. All tickets will be generated atomically in a single
+                  transaction.
                 </span>
                 <button
                   type="button"
@@ -353,9 +352,7 @@ export default function BoothSalesPage() {
               Total Price:{' '}
               <span className="font-mono font-bold text-emerald-400 text-sm">
                 {selectedEvent
-                  ? formatCurrency(
-                      selectedEvent.price * (isGroup ? groupTickets.length : 1)
-                    )
+                  ? formatCurrency(selectedEvent.price * (isGroup ? groupTickets.length : 1))
                   : '$0.00'}
               </span>
             </div>
@@ -418,11 +415,15 @@ export default function BoothSalesPage() {
             <div className="rounded-xl bg-slate-950 p-3.5 border border-slate-800 text-left text-xs space-y-1 mb-4 font-mono">
               <div className="flex justify-between">
                 <span className="text-slate-500">Attendee:</span>
-                <span className="text-slate-200 font-sans font-semibold">{issuedTicket.holderName}</span>
+                <span className="text-slate-200 font-sans font-semibold">
+                  {issuedTicket.holderName}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Ticket ID:</span>
-                <span className="text-cyan-300 font-bold">{issuedTicket.ticketId || issuedTicket.id}</span>
+                <span className="text-cyan-300 font-bold">
+                  {issuedTicket.ticketId || issuedTicket.id}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Node:</span>

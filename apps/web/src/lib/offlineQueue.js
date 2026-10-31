@@ -41,7 +41,7 @@ export async function syncOfflineScans() {
   const pending = await getPendingOfflineScans();
   if (pending.length === 0) return { processed: 0, accepted: 0, conflicts: [] };
 
-    try {
+  try {
     const res = await api.post(
       '/api/gate/scan-offline-batch',
       {
