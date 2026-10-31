@@ -346,12 +346,68 @@ function applyCheckinRecorded(db, op, payload) {
       payload.result || 'accepted',
       payload.resolved ? 1 : 0
     );
+  }
 
-    if (payload.result === 'accepted') {
-      db.prepare("UPDATE tickets SET status = 'used' WHERE id = ? AND status != 'revoked'").run(
-        ticketId
+  // Stage 4 Conflict Resolution: Check all accepted checkins for this ticket
+  const acceptedCheckins = db
+    .prepare("SELECT * FROM checkins WHERE ticket_id = ? AND result = 'accepted'")
+    .all(ticketId);
+
+  if (acceptedCheckins.length > 1) {
+    // Sort deterministically by HLC ascending (lowest HLC wins, tie-break by gate_node_id)
+    acceptedCheckins.sort((a, b) => HLC.compare(a.hlc, b.hlc));
+    const winner = acceptedCheckins[0];
+    const losers = acceptedCheckins.slice(1);
+
+    for (const loser of losers) {
+      db.prepare("UPDATE checkins SET result = 'rejected_duplicate', resolved = 1 WHERE id = ?").run(
+        loser.id
       );
+
+      const conflictId = `${winner.id}_${loser.id}`;
+      const details = {
+        reason: 'Offline concurrent check-in conflict. Winner had earlier HLC timestamp.',
+        winnerGate: winner.gate_node_id,
+        loserGate: loser.gate_node_id,
+        winnerHlc: winner.hlc,
+        loserHlc: loser.hlc,
+        winnerTime: winner.created_at,
+        loserTime: loser.created_at,
+      };
+
+      db.prepare(
+        `
+        INSERT INTO conflicts (id, ticket_id, winner_checkin_id, loser_checkin_id, detected_at, details_json)
+        VALUES (?, ?, ?, ?, datetime('now'), ?)
+        ON CONFLICT(id) DO NOTHING
+      `
+      ).run(conflictId, ticketId, winner.id, loser.id, JSON.stringify(details));
+
+      try {
+        db.prepare("UPDATE tickets SET fraud_alert = 1, status = 'used' WHERE id = ?").run(
+          ticketId
+        );
+      } catch (_e) {
+        db.prepare("UPDATE tickets SET status = 'used' WHERE id = ?").run(ticketId);
+      }
+
+      try {
+        const { broadcastSocketEvent } = require('../socket');
+        const { SOCKET_EVENTS } = require('@festpass/shared');
+        broadcastSocketEvent(SOCKET_EVENTS.CONFLICT_DETECTED, {
+          id: conflictId,
+          ticketId,
+          winnerCheckinId: winner.id,
+          loserCheckinId: loser.id,
+          details,
+          detectedAt: new Date().toISOString(),
+        });
+      } catch (_e) {}
     }
+  } else if (acceptedCheckins.length === 1) {
+    db.prepare("UPDATE tickets SET status = 'used' WHERE id = ? AND status != 'revoked'").run(
+      ticketId
+    );
   }
 }
 
