@@ -300,7 +300,7 @@ All tables are created in `apps/server/src/db/migrations/001_initial_schema.sql`
 | **Stage 2** | Auth, Events & Booth Sales   | JWT auth, events CRUD, booth ticket sales, quota oversell prevention  | Member 2 | **DONE** |
 | **Stage 3** | Replication & Membership     | Peer gossip, heartbeat failure detector, anti-entropy log sync        | Member 3 | **DONE** |
 | **Stage 4** | Gate Validation & Quorum     | Offline validation, quorum checkin, concurrent double-scan resolution | Member 4 | **DONE** |
-| **Stage 5** | Admin & Booth Frontend       | React admin dashboard, booth sales UI, ticket view with failover      | Member 5 | PENDING  |
+| **Stage 5** | Admin & Booth Frontend       | React admin dashboard, booth sales UI, ticket view with failover      | Member 5 | **DONE** |
 | **Stage 6** | Scanner UI, Chaos & Testing  | Gate QR scanner, live cluster dashboard, chaos tools, load tests      | Member 6 | PENDING  |
 
 ---
@@ -765,3 +765,37 @@ peerTransport.resetChaos();
 
 - Booth Nodes: `http://localhost:4001`, `http://localhost:4002`, `http://localhost:4003`
 - Gate Nodes: `http://localhost:4004`, `http://localhost:4005`, `http://localhost:4006`
+
+---
+
+## 19. Stage 5 Completion Report
+
+### 19.1 Built in Stage 5
+
+1. **Resilient Distributed API Client (`apps/web/src/api/client.js`)**:
+   - Manages automatic multi-node failover across Booth nodes (`4001-4003`) and Gate nodes (`4004-4006`).
+   - Remembers the last working node and publishes active node state to subscribers.
+   - Automatically injects unique `Idempotency-Key` headers on mutating requests (`POST`/`PUT`) to guarantee duplicate prevention during network failovers.
+   - Automatic JWT token bearer injection and 401 session expiration handling.
+
+2. **State Management & Authentication**:
+   - Zustand store (`useAuthStore`) managing user roles (`admin`, `booth_staff`, `gate_staff`) and localStorage persistence.
+   - Protected routes (`ProtectedRoute`) enforcing RBAC across admin and booth portals.
+   - Login page (`/login`) with Viva quick-login preset buttons for Admin, Booth Staff, and Gate Staff.
+
+3. **Admin Dashboard & Management Pages**:
+   - `/admin`: Live sales KPIs (revenue, tickets, quotas), interactive Recharts breakdowns by event and booth quotas, and real-time Socket.IO activity stream.
+   - `/admin/events`: Full event CRUD with status management (`draft`, `on_sale`, `closed`), capacity inputs, and visual booth quota slice viewer.
+   - `/admin/tickets`: Searchable ticket registry by attendee email, phone, or Snowflake ID; status indicators (`valid`, `used`, `revoked`, `fraudAlert`); administrative revocation with confirmation modal.
+
+4. **Point-of-Sale & Attendee Pass Portal**:
+   - `/booth`: Fast booth sales form for single and bulk bookings (up to 20 tickets), animated confirmation modal with high-resolution `qrcode.react` canvas, PNG download, and print pass action.
+   - `/my-ticket`: Public holographic festival pass viewer with real-time status glow, QR presentation for gate scanners, and check-in history.
+
+5. **Real-Time WebSocket Integration (`src/lib/socket.js`)**:
+   - Dynamic reconnection to active booth node upon failover.
+   - Instant toast alerts via `react-hot-toast` for cluster events: `ticket:issued`, `checkin:result`, and `conflict:detected`.
+
+6. **Web Testing Suite**:
+   - `client_failover.test.js`: Verified auto-failover, node switching, and idempotency key injection.
+   - `auth_store.test.js`: Verified login state transitions and local storage persistence. Total test suite across repo: 18 test files, 96 passing tests.

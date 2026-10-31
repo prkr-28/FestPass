@@ -23,4 +23,12 @@ module.exports = defineWorkspace([
       },
     },
   },
+  {
+    test: {
+      name: 'web',
+      root: './apps/web',
+      globals: true,
+      environment: 'jsdom',
+    },
+  },
 ]);
