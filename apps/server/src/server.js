@@ -8,6 +8,7 @@ const logger = require('./logger');
 const { initDb, closeDb } = require('./db');
 const { createApp } = require('./app');
 const { initSocket } = require('./socket');
+const { replicationService } = require('./services/replicationService');
 
 function startServer() {
   logger.info(
@@ -40,6 +41,9 @@ function startServer() {
       },
       `Node ${config.nodeId} (${config.nodeRole.toUpperCase()}) running at http://localhost:${config.port}`
     );
+
+    // Start Stage 3 peer replication and membership services
+    replicationService.start();
   });
 
   // Graceful shutdown handling
@@ -49,6 +53,7 @@ function startServer() {
     isShuttingDown = true;
 
     logger.info({ signal, nodeId: config.nodeId }, 'Initiating graceful node shutdown...');
+    replicationService.stop();
     server.close(() => {
       logger.info('HTTP server closed');
       closeDb();

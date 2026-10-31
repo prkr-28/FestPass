@@ -21,7 +21,10 @@ function getPrivateKey() {
   }
 
   // Look for keys/ed25519-private.pem
-  const keyPath = path.resolve(process.cwd(), 'keys', 'ed25519-private.pem');
+  let keyPath = path.resolve(process.cwd(), 'keys', 'ed25519-private.pem');
+  if (!fs.existsSync(keyPath)) {
+    keyPath = path.resolve(__dirname, '../../../../keys', 'ed25519-private.pem');
+  }
   if (fs.existsSync(keyPath)) {
     cachedPrivateKey = fs.readFileSync(keyPath, 'utf8');
     return cachedPrivateKey;
@@ -39,7 +42,10 @@ function getPublicKey() {
   }
 
   // Look for keys/ed25519-public.pem
-  const keyPath = path.resolve(process.cwd(), 'keys', 'ed25519-public.pem');
+  let keyPath = path.resolve(process.cwd(), 'keys', 'ed25519-public.pem');
+  if (!fs.existsSync(keyPath)) {
+    keyPath = path.resolve(__dirname, '../../../../keys', 'ed25519-public.pem');
+  }
   if (fs.existsSync(keyPath)) {
     cachedPublicKey = fs.readFileSync(keyPath, 'utf8');
     return cachedPublicKey;

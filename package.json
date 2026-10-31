@@ -23,6 +23,7 @@
     "node:dev:g3": "cross-env NODE_ID=G3 PORT=4006 NODE_ROLE=gate NODE_INDEX=6 npm run dev -w apps/server",
     "keygen": "node scripts/keygen.js",
     "seed": "node scripts/seed.js",
+    "verify:convergence": "node scripts/verify_convergence.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

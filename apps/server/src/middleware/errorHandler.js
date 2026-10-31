@@ -35,11 +35,12 @@ function errorHandler(err, req, res, _next) {
   }
 
   // Handle explicit AppError
-  if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+  if (err instanceof AppError || err.name === 'AppError') {
+    const statusCode = err.statusCode || err.status || 500;
+    return res.status(statusCode).json({
       success: false,
       error: {
-        code: err.code,
+        code: err.code || ERROR_CODES.INTERNAL_ERROR,
         message: err.message,
         details: err.details,
       },

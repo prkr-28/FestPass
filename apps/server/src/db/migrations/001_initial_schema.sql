@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS peers (
   url TEXT NOT NULL,
   role TEXT NOT NULL,
   last_seen TEXT NOT NULL DEFAULT (datetime('now')),
-  status TEXT NOT NULL DEFAULT 'healthy' CHECK(status IN ('healthy', 'suspect', 'dead'))
+  status TEXT NOT NULL DEFAULT 'healthy' CHECK(status IN ('healthy', 'alive', 'suspect', 'dead'))
 );
 
 -- 8. Conflicts table (for logging offline concurrent check-in conflicts)

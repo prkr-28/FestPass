@@ -18,6 +18,7 @@ const { getDb } = require('../db');
 const idService = require('./idService');
 const hlcService = require('./hlcService');
 const tokenService = require('./tokenService');
+const replicationService = require('./replicationService');
 const { broadcastTicketIssued } = require('../socket');
 const { AppError } = require('../middleware/errorHandler');
 
@@ -89,7 +90,7 @@ async function issueTicket({
 
   const db = getDb();
 
-  const ticket = db.transaction(() => {
+  const transactionResult = db.transaction(() => {
     // 1. Verify event exists and is open for sale
     const event = db.prepare('SELECT * FROM events WHERE id = ?').get(eventId);
     if (!event) {
@@ -168,6 +169,13 @@ async function issueTicket({
 
     // 6. Write op_log entry for state machine replication
     const opId = idService.generateId();
+    const opRecord = {
+      op_id: opId,
+      origin_node: config.nodeId,
+      hlc: issuedAtHlc,
+      type: OP_TYPES.TICKET_ISSUED,
+      payload_json: JSON.stringify(ticketRecord),
+    };
     db.prepare(
       `INSERT INTO op_log (op_id, origin_node, hlc, type, payload_json, applied_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`
@@ -178,10 +186,17 @@ async function issueTicket({
       setIdempotencyRecord(idempotencyKey, ticketRecord);
     }
 
-    return ticketRecord;
+    return { ticketRecord, opRecord };
   })();
 
-  // 8. Broadcast real-time Socket.IO event
+  const { ticketRecord: ticket, opRecord } = transactionResult;
+
+  // 8. Trigger eager push replication to cluster
+  if (opRecord) {
+    replicationService.notifyNewOp(opRecord);
+  }
+
+  // 9. Broadcast real-time Socket.IO event
   broadcastTicketIssued(ticket);
 
   return ticket;
@@ -265,6 +280,8 @@ async function issueBulkTickets({ eventId, tickets, idempotencyKey = null }) {
        VALUES (?, ?, ?, ?, ?, datetime('now'))`
     );
 
+    const newOps = [];
+
     for (const item of tickets) {
       const ticketId = idService.generateId();
       const issuedAtHlc = hlcService.send().toString();
@@ -294,6 +311,14 @@ async function issueBulkTickets({ eventId, tickets, idempotencyKey = null }) {
       };
 
       const opId = idService.generateId();
+      const opRecord = {
+        op_id: opId,
+        origin_node: config.nodeId,
+        hlc: issuedAtHlc,
+        type: OP_TYPES.TICKET_ISSUED,
+        payload_json: JSON.stringify(ticketRecord),
+      };
+
       insertOpLogStmt.run(
         opId,
         config.nodeId,
@@ -303,6 +328,7 @@ async function issueBulkTickets({ eventId, tickets, idempotencyKey = null }) {
       );
 
       issuedTickets.push(ticketRecord);
+      newOps.push(opRecord);
     }
 
     const bulkPayload = {
@@ -314,15 +340,22 @@ async function issueBulkTickets({ eventId, tickets, idempotencyKey = null }) {
       setIdempotencyRecord(idempotencyKey, bulkPayload);
     }
 
-    return bulkPayload;
+    return { bulkPayload, newOps };
   })();
 
+  const { bulkPayload, newOps } = result;
+
+  // Broadcast to replication engine
+  for (const op of newOps) {
+    replicationService.notifyNewOp(op);
+  }
+
   // Broadcast Socket.IO events for each ticket
-  for (const t of result.tickets) {
+  for (const t of bulkPayload.tickets) {
     broadcastTicketIssued(t);
   }
 
-  return result;
+  return bulkPayload;
 }
 
 /**
@@ -391,7 +424,7 @@ function queryTickets({ email, phone, eventId }) {
 async function revokeTicket(ticketId, reason = '') {
   const db = getDb();
 
-  return db.transaction(() => {
+  const transactionResult = db.transaction(() => {
     const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
     if (!ticket) {
       throw new AppError(`Ticket with id '${ticketId}' not found`, 404, ERROR_CODES.NOT_FOUND);
@@ -399,10 +432,13 @@ async function revokeTicket(ticketId, reason = '') {
 
     if (ticket.status === 'revoked') {
       return {
-        ticketId: ticket.id,
-        eventId: ticket.event_id,
-        status: 'revoked',
-        reason: 'Already revoked',
+        result: {
+          ticketId: ticket.id,
+          eventId: ticket.event_id,
+          status: 'revoked',
+          reason: 'Already revoked',
+        },
+        opRecord: null,
       };
     }
 
@@ -417,18 +453,35 @@ async function revokeTicket(ticketId, reason = '') {
       revokedAtHlc: hlc,
     });
 
+    const opRecord = {
+      op_id: opId,
+      origin_node: config.nodeId,
+      hlc,
+      type: OP_TYPES.TICKET_REVOKED,
+      payload_json: payload,
+    };
+
     db.prepare(
       `INSERT INTO op_log (op_id, origin_node, hlc, type, payload_json, applied_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`
     ).run(opId, config.nodeId, hlc, OP_TYPES.TICKET_REVOKED, payload);
 
     return {
-      ticketId,
-      eventId: ticket.event_id,
-      status: 'revoked',
-      reason,
+      result: {
+        ticketId,
+        eventId: ticket.event_id,
+        status: 'revoked',
+        reason,
+      },
+      opRecord,
     };
   })();
+
+  if (transactionResult.opRecord) {
+    replicationService.notifyNewOp(transactionResult.opRecord);
+  }
+
+  return transactionResult.result;
 }
 
 /**
