@@ -5,8 +5,7 @@ import {
   getActiveBoothNode,
   
   BOOTH_NODES,
-  GATE_NODES,
-  setActiveBoothNode,
+    setActiveBoothNode,
   subscribeNodeChanges,
 } from '../api/client';
 import { Ticket, Server, LogOut, User, RefreshCw } from 'lucide-react';

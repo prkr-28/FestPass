@@ -30,10 +30,17 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{js,jsx,json,md}\""
+    "format:check": "prettier --check \"**/*.{js,jsx,json,md}\"",
+    "supervisor": "node tools/supervisor/server.js",
+    "demo:partition": "node scripts/demo_partition_conflict.js",
+    "test:scenario": "node scripts/scenario_concurrent_scans.js",
+    "benchmark": "node scripts/benchmark_latency.js",
+    "loadtest:sales": "node scripts/loadtest_sales.js",
+    "loadtest:scan": "node scripts/loadtest_scan.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.10.0",
+    "autocannon": "^8.0.0",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "eslint": "^9.10.0",
