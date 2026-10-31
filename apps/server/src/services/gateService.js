@@ -324,21 +324,17 @@ async function validateAndCheckin({ token, mode = 'online', offlineHlc = null })
   finalHlc = finalHlc || hlcService.send().toString();
 
   const recordTx = db.transaction(() => {
-    // Insert checkin record
+    // 1. Ensure event exists to satisfy foreign key constraint during out-of-order delivery
     db.prepare(
       `
-      INSERT INTO checkins (id, ticket_id, gate_node_id, hlc, mode, result, resolved, created_at)
-      VALUES (?, ?, ?, ?, ?, 'accepted', 0, datetime('now'))
+      INSERT INTO events (id, name, venue, starts_at, capacity, price, status, created_at)
+      VALUES (?, 'Pending Replication Event', 'Campus Venue', datetime('now'), 1000, 0, 'on_sale', datetime('now'))
+      ON CONFLICT(id) DO NOTHING
     `
-    ).run(checkinId, ticketId, config.nodeId, finalHlc, actualMode);
+    ).run(eventId);
 
-    // If ticket exists locally, update status to 'used'
-    if (localTicket) {
-      db.prepare("UPDATE tickets SET status = 'used' WHERE id = ? AND status != 'revoked'").run(
-        ticketId
-      );
-    } else {
-      // Replicate ticket placeholder if out-of-order delivery
+    // 2. Ensure ticket exists before recording checkin (satisfies checkins -> tickets foreign key)
+    if (!localTicket) {
       db.prepare(
         `
         INSERT INTO tickets (id, event_id, holder_name, holder_email, holder_phone, issued_by_node, issued_at_hlc, status, token, created_at)
@@ -346,7 +342,19 @@ async function validateAndCheckin({ token, mode = 'online', offlineHlc = null })
         ON CONFLICT(id) DO UPDATE SET status = CASE WHEN tickets.status = 'revoked' THEN 'revoked' ELSE 'used' END
       `
       ).run(ticketId, eventId, config.nodeId, finalHlc, token);
+    } else {
+      db.prepare("UPDATE tickets SET status = 'used' WHERE id = ? AND status != 'revoked'").run(
+        ticketId
+      );
     }
+
+    // 3. Insert checkin record
+    db.prepare(
+      `
+      INSERT INTO checkins (id, ticket_id, gate_node_id, hlc, mode, result, resolved, created_at)
+      VALUES (?, ?, ?, ?, ?, 'accepted', 0, datetime('now'))
+    `
+    ).run(checkinId, ticketId, config.nodeId, finalHlc, actualMode);
 
     // Write CHECKIN_RECORDED to op_log
     const op = {
